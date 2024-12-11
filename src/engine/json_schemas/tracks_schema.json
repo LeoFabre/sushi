@@ -164,6 +164,11 @@ R"(
             ]
           }
         },
+        "thread":
+        {
+          "type": "integer",
+          "minimum": 0
+        },
         "plugins":
         {
           "type": "array",

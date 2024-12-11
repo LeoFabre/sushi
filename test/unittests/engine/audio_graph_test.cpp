@@ -59,6 +59,8 @@ TEST_F(TestAudioGraph, TestSingleCoreOperation)
     ASSERT_FALSE(_module_under_test->remove(&_track_2));
 
     ASSERT_EQ(0u, _accessor->audio_graph()[0].size());
+
+    ASSERT_EQ(1, _module_under_test->threads());
 }
 
 /**
@@ -75,6 +77,8 @@ TEST_F(TestAudioGraph, TestMultiCoreOperation)
     SetUp(3);
     ASSERT_TRUE(_module_under_test->add(&_track_1));
     ASSERT_TRUE(_module_under_test->add(&_track_2));
+
+    ASSERT_EQ(3, _module_under_test->threads());
 
     // Tracks should end up in slot 0 and 1
     ASSERT_EQ(3u, _accessor->audio_graph().size());

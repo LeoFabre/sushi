@@ -91,10 +91,10 @@ public:
     /**
      * @brief Construct a new AudioEngine
      * @param sample_rate The sample to use in Hz
-     * @param rt_cpu_cores The maximum number of cpu cores to use for audio processing. Default
-     *                     is 1 and means that audio processing is done only in the rt callback
-     *                     of the audio frontend.
-     *                     With values > 1 tracks will be processed in parallel threads.
+     * @param rt_threads The maximum number of cpu cores to use for audio processing. Default
+     *                   is 1 and means that audio processing is done only in the rt callback
+     *                   of the audio frontend.
+     *                   With values > 1 tracks will be processed in parallel threads.
      * @param device_name The audio device name - only used on Apple for fetching the audio thread workgroup, and will be unused on other platforms.
      * @param debug_mode_sw Enable xenomai specific thread debugging for all audio threads in
      *                      multicore mode.
@@ -102,7 +102,7 @@ public:
      *                         If nullptr, a normal EventDispatcher is created and used.
      */
     explicit AudioEngine(float sample_rate,
-                         int rt_cpu_cores = 1,
+                         int rt_threads = 1,
                          std::optional<std::string> device_name = std::nullopt,
                          bool debug_mode_sw = false,
                          dispatcher::BaseEventDispatcher* event_dispatcher = nullptr);
@@ -361,9 +361,12 @@ public:
      * @brief Create an empty track
      * @param name The unique name of the track to be created.
      * @param channel_count The number of channels in the track.
+     * @param thread The audio processing thread to allocate the track to
      * @return the unique id of the track created, only valid if status is EngineReturnStatus::OK
      */
-    std::pair<EngineReturnStatus, ObjectId> create_track(const std::string& name, int channel_count) override;
+    std::pair<EngineReturnStatus, ObjectId> create_track(const std::string& name,
+                                                         int channel_count,
+                                                         std::optional<int> thread) override;
 
     /**
      * @brief Create an empty track
@@ -371,7 +374,7 @@ public:
      * @param bus_count The number of stereo pairs in the track.
      * @return EngineInitStatus::OK in case of success, different error code otherwise.
      */
-    std::pair<EngineReturnStatus, ObjectId> create_multibus_track(const std::string& name, int bus_count) override;
+    std::pair<EngineReturnStatus, ObjectId> create_multibus_track(const std::string& name, int bus_count, std::optional<int> thread) override;
 
     std::pair<EngineReturnStatus, ObjectId> create_post_track(const std::string& name) override;
 
@@ -558,7 +561,7 @@ private:
      * @param track Pointer to the track
      * @return OK if successful, error code otherwise
      */
-    EngineReturnStatus _register_new_track(const std::string& name, std::shared_ptr<Track> track);
+    EngineReturnStatus _register_new_track(const std::string& name, std::shared_ptr<Track> track, std::optional<int> thread);
 
     /**
     * @brief Called from a non-realtime thread to process a control event in the realtime thread
@@ -595,7 +598,7 @@ private:
      * @param track The track to add
      * @return True if successful, false otherwise
      */
-    bool _add_track(Track* track);
+    bool _add_track(Track* track, std::optional<int> thread);
 
     /**
      * @brief Remove a track from the audio engine, if engine is running, this must be called from

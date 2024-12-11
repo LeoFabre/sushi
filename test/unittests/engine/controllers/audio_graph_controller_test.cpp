@@ -26,7 +26,7 @@ protected:
 
         _audio_engine->set_audio_channels(8, 8);
 
-        _audio_engine->create_track("Track 1", 2);
+        _audio_engine->create_track("Track 1", 2, std::optional<int>());
         _track_id = _audio_engine->processor_container()->track("Track 1")->id();
     }
     
@@ -149,7 +149,7 @@ TEST_F(AudioGraphControllerTest, TestCreatingAndRemovingProcessors)
     int proc_id = processors[0]->id();
 
     // Create a new track and move the processor there
-    auto [track_status, track_2_id] = _audio_engine->create_track("Track 2", 2);
+    auto [track_status, track_2_id] = _audio_engine->create_track("Track 2", 2, std::optional<int>());
     ASSERT_EQ(EngineReturnStatus::OK, track_status);
 
     status = _module_under_test->move_processor_on_track(proc_id, _track_id, track_2_id, std::nullopt);

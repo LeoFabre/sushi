@@ -233,7 +233,7 @@ control::ControlStatus AudioGraphController::create_track(const std::string& nam
 
     auto lambda = [=, this] () -> int
     {
-        auto [status, track_id] = _engine->create_track(name, channels);
+        auto [status, track_id] = _engine->create_track(name, channels, std::optional<int>());
         return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
     };
 
@@ -247,7 +247,7 @@ control::ControlStatus AudioGraphController::create_multibus_track(const std::st
     ELKLOG_LOG_DEBUG("create_multibus_track called with name {} and {} buses ", name, buses);
     auto lambda = [=, this] () -> int
     {
-        auto [status, track_id] = _engine->create_multibus_track(name, buses);
+        auto [status, track_id] = _engine->create_multibus_track(name, buses, std::optional<int>());
         return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
     };
 

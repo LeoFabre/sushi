@@ -42,20 +42,20 @@ void external_render_callback(void* data)
     }
 }
 
-AudioGraph::AudioGraph(int cpu_cores,
+AudioGraph::AudioGraph(int threads,
                        int max_no_tracks,
                        [[maybe_unused]] float sample_rate,
                        [[maybe_unused]] std::optional<std::string> device_name,
-                       bool debug_mode_switches) : _audio_graph(cpu_cores),
-                                                   _event_outputs(cpu_cores),
-                                                   _cores(cpu_cores),
+                       bool debug_mode_switches) : _audio_graph(threads),
+                                                   _event_outputs(threads),
+                                                   _cores(threads),
                                                    _current_core(0)
 {
-    assert(cpu_cores > 0);
+    assert(threads > 0);
 
     if (_cores > 1)
     {
-        twine::apple::AppleMultiThreadData apple_data {};
+        twine::apple::AppleMultiThreadData apple_data{};
 #ifdef SUSHI_APPLE_THREADING
         apple_data.chunk_size = AUDIO_CHUNK_SIZE;
         apple_data.current_sample_rate = sample_rate;
@@ -78,16 +78,25 @@ AudioGraph::AudioGraph(int cpu_cores,
             if (status.first != twine::WorkerPoolStatus::OK)
             {
 #ifdef SUSHI_APPLE_THREADING
-                ELKLOG_LOG_ERROR("Failed to start twine worker: {}",  twine::apple::status_to_string(status.second));
+                ELKLOG_LOG_ERROR("Failed to start twine worker: {}", twine::apple::status_to_string(status.second));
 #endif
             }
 
             tracks.reserve(max_no_tracks);
         }
+        std::string cpu_ids;
+        for (const auto& info : _worker_pool->core_info())
+        {
+            _core_ids.push_back(info.id);
+            ELKLOG_LOG_WARNING_IF(info.workers > 1, "Multiple workers assigned to core {}", info.id);
+            cpu_ids.append(std::to_string(info.id)).append(", ");
+        }
+        ELKLOG_LOG_INFO("Worker pool created with {} cores on cpus: {}", _core_ids.size(), cpu_ids);
     }
     else
     {
         _audio_graph[0].reserve(max_no_tracks);
+        _core_ids.push_back(0);
     }
 }
 
@@ -97,6 +106,7 @@ bool AudioGraph::add(Track* track)
     if (slot.size() < slot.capacity())
     {
         track->set_event_output(&_event_outputs[_current_core]);
+        track->set_active_rt_processing(true, _current_core);
         slot.push_back(track);
         _current_core = (_current_core + 1) % _cores;
         return true;
@@ -104,13 +114,15 @@ bool AudioGraph::add(Track* track)
     return false;
 }
 
-bool AudioGraph::add_to_core(Track* track, int core)
+bool AudioGraph::add_to_thread(Track* track, int thread)
 {
-    assert(core < _cores);
-    auto& slot = _audio_graph[core];
+    assert(thread < _cores);
+    // TODO - Clamp thread or return false to avoid segfault?
+    auto& slot = _audio_graph[thread];
     if (slot.size() < slot.capacity())
     {
-        track->set_event_output(&_event_outputs[core]);
+        track->set_event_output(&_event_outputs[thread]);
+        track->set_active_rt_processing(true, thread);
         slot.push_back(track);
         return true;
     }
@@ -126,6 +138,7 @@ bool AudioGraph::remove(Track* track)
             if (*i == track)
             {
                 slot.erase(i);
+                track->set_active_rt_processing(false, 0);
                 return true;
             }
         }

@@ -365,10 +365,12 @@ public:
      * @brief Set the on Track status. Call with true when adding a Processor to a track or
      *        track to the engine, and false when removing it.
      * @param active True if Processor is being added to a Track, False otherwise.
+     * @param thread The audio processing thread that is currently calling process_audio
      */
-    void set_active_rt_processing(bool active)
+    void set_active_rt_processing(bool active, int thread = 0)
     {
         _on_track = active;
+        _current_processing_thread = thread;
     }
 
     /**
@@ -501,6 +503,8 @@ protected:
 
     int _current_input_channels{0};
     int _current_output_channels{0};
+
+    int _current_processing_thread{0};
 
     bool _enabled{false};
     bool _bypassed{false};

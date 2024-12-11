@@ -88,11 +88,11 @@ void ClipDetector::detect_clipped_samples(const ChunkSampleBuffer& buffer, RtSaf
 
 
 AudioEngine::AudioEngine(float sample_rate,
-                         int rt_cpu_cores,
+                         int rt_threads,
                          std::optional<std::string> device_name,
                          bool debug_mode_sw,
                          dispatcher::BaseEventDispatcher* event_dispatcher) : BaseEngine::BaseEngine(sample_rate),
-                                                          _audio_graph(rt_cpu_cores, MAX_TRACKS, sample_rate, device_name, debug_mode_sw),
+                                                          _audio_graph(rt_threads, MAX_TRACKS, sample_rate, device_name, debug_mode_sw),
                                                           _audio_in_connections(MAX_AUDIO_CONNECTIONS),
                                                           _audio_out_connections(MAX_AUDIO_CONNECTIONS),
                                                           _transport(sample_rate, &_main_out_queue),
@@ -559,7 +559,7 @@ EngineReturnStatus AudioEngine::_send_control_event(RtEvent& event)
     return EngineReturnStatus::QUEUE_FULL;
 }
 
-std::pair<EngineReturnStatus, ObjectId> AudioEngine::create_multibus_track(const std::string& name, int bus_count)
+std::pair<EngineReturnStatus, ObjectId> AudioEngine::create_multibus_track(const std::string& name, int bus_count, std::optional<int> thread)
 {
     if (bus_count > MAX_TRACK_BUSES)
     {
@@ -567,7 +567,7 @@ std::pair<EngineReturnStatus, ObjectId> AudioEngine::create_multibus_track(const
         return {EngineReturnStatus::INVALID_N_CHANNELS, ObjectId(0)};
     }
     auto track = std::make_shared<Track>(_host_control, bus_count, &_process_timer);
-    auto status = _register_new_track(name, track);
+    auto status = _register_new_track(name, track, thread);
     if (status != EngineReturnStatus::OK)
     {
         return {status, ObjectId(0)};
@@ -575,7 +575,7 @@ std::pair<EngineReturnStatus, ObjectId> AudioEngine::create_multibus_track(const
     return {EngineReturnStatus::OK, track->id()};
 }
 
-std::pair<EngineReturnStatus, ObjectId> AudioEngine::create_track(const std::string &name, int channel_count)
+std::pair<EngineReturnStatus, ObjectId> AudioEngine::create_track(const std::string& name, int channel_count, std::optional<int> thread)
 {
     if ((channel_count < 0 || channel_count > MAX_TRACK_CHANNELS))
     {
@@ -586,7 +586,7 @@ std::pair<EngineReturnStatus, ObjectId> AudioEngine::create_track(const std::str
     bool pan_control = channel_count <= 2;
 
     auto track = std::make_shared<Track>(_host_control, channel_count, &_process_timer, pan_control);
-    auto status = _register_new_track(name, track);
+    auto status = _register_new_track(name, track, thread);
     if (status != EngineReturnStatus::OK)
     {
         return {status, ObjectId(0)};
@@ -842,7 +842,7 @@ EngineReturnStatus AudioEngine::delete_plugin(ObjectId plugin_id)
     return EngineReturnStatus::OK;
 }
 
-EngineReturnStatus AudioEngine::_register_new_track(const std::string& name, std::shared_ptr<Track> track)
+EngineReturnStatus AudioEngine::_register_new_track(const std::string& name, std::shared_ptr<Track> track, std::optional<int> thread)
 {
     track->init(_sample_rate);
     track->set_enabled(true);
@@ -854,10 +854,22 @@ EngineReturnStatus AudioEngine::_register_new_track(const std::string& name, std
         return status;
     }
 
+    int max_threads = _audio_graph.threads();
+    /*if (max_threads == 1 && thread.value_or(0) != 0) // TODO - maybe redundant case
+    {
+        ELKLOG_LOG_INFO("Track was set to run on thread {}, but sushi is running in single core mode", thread.value_or(0));
+        thread = std::nullopt;
+    }*/
+    if (thread.value_or(0) >= max_threads)
+    {
+        ELKLOG_LOG_INFO("Track was set to run on thread {}, but sushi is configured to use {} threads, reverting to round-robin allocation", thread.value_or(0), max_threads);
+        thread = std::nullopt;
+    }
+
     if (realtime())
     {
         auto insert_event = RtEvent::make_insert_processor_event(track.get());
-        auto add_event = RtEvent::make_add_track_event(track->id());
+        auto add_event = RtEvent::make_add_track_event(track->id(), thread);
         _send_control_event(insert_event);
         _send_control_event(add_event);
         bool inserted = _event_receiver.wait_for_response(insert_event.returnable_event()->event_id(), RT_EVENT_TIMEOUT);
@@ -870,7 +882,7 @@ EngineReturnStatus AudioEngine::_register_new_track(const std::string& name, std
     }
     else
     {
-        if (_add_track(track.get()) == false)
+        if (!_add_track(track.get(), thread))
         {
 
             ELKLOG_LOG_ERROR_IF(track->type() == TrackType::REGULAR, "Error adding track {}, max number of tracks reached", track->name());
@@ -878,7 +890,7 @@ EngineReturnStatus AudioEngine::_register_new_track(const std::string& name, std
             ELKLOG_LOG_ERROR_IF(track->type() == TrackType::POST, "Error adding track {}, Only one post track allowed", track->name());
             return EngineReturnStatus::ERROR;
         }
-        if (_insert_processor_in_realtime_part(track.get()) == false)
+        if (!_insert_processor_in_realtime_part(track.get()))
         {
             ELKLOG_LOG_ERROR("Error adding track {}", track->name());
             return EngineReturnStatus::ERROR;
@@ -902,7 +914,7 @@ EngineReturnStatus AudioEngine::_register_new_track(const std::string& name, std
 std::pair<EngineReturnStatus, ObjectId> AudioEngine::_create_master_track(const std::string& name, TrackType type, int channels)
 {
     auto track = std::make_shared<Track>(_host_control, channels, &_process_timer, false, type);
-    auto status = _register_new_track(name, track);
+    auto status = _register_new_track(name, track, std::nullopt);
     if (status != EngineReturnStatus::OK)
     {
         return {status, ObjectId(0)};
@@ -1069,16 +1081,17 @@ void AudioEngine::_process_internal_rt_events()
             }
             case RtEventType::ADD_TRACK:
             {
-                auto typed_event = event.processor_reorder_event();
+                auto typed_event = event.track_event();
                 auto track = static_cast<Track*>(_realtime_processors[typed_event->track()]);
-                typed_event->set_handled(track ? _add_track(track) : false);
+                auto thread = typed_event->thread();
+                typed_event->set_handled(_add_track(track, thread));
                 break;
             }
             case RtEventType::REMOVE_TRACK:
             {
-                auto typed_event = event.processor_reorder_event();
+                auto typed_event = event.track_event();
                 auto track = static_cast<Track*>(_realtime_processors[typed_event->track()]);
-                typed_event->set_handled(track ? _remove_track(track) : false);
+                typed_event->set_handled(_remove_track(track));
                 break;
             }
             case RtEventType::ADD_AUDIO_CONNECTION:
@@ -1241,13 +1254,20 @@ void print_single_timings_for_node(std::fstream& f, performance::PerformanceTime
     }
 }
 
-bool AudioEngine::_add_track(Track* track)
+bool AudioEngine::_add_track(Track* track, std::optional<int> thread)
 {
     bool added = false;
     switch (track->type())
     {
         case TrackType::REGULAR:
-            added = _audio_graph.add(track);
+            if (thread.has_value())
+            {
+                added = _audio_graph.add_to_thread(track, *thread);
+            }
+            else
+            {
+                added = _audio_graph.add(track);
+            }
             break;
 
         case TrackType::POST:
