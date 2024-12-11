@@ -263,6 +263,7 @@ inline void to_grpc(sushi_rpc::TrackInfo& dest, const sushi::control::TrackInfo&
     dest.set_name(src.name);
     dest.set_channels(src.channels);
     dest.set_buses(src.buses);
+    dest.set_thread(src.thread);
     dest.mutable_type()->set_type(to_grpc(src.type));
     for (auto i : src.processors)
     {
@@ -666,6 +667,7 @@ inline void to_grpc(sushi_rpc::TrackState& dest, sushi::control::TrackState& src
     dest.set_label(std::move(src.label));
     dest.set_channels(src.channels);
     dest.set_buses(src.buses);
+    dest.set_thread(src.thread);
     dest.mutable_type()->set_type(to_grpc(src.type));
     to_grpc(*dest.mutable_track_state(), src.track_state);
 
@@ -1105,7 +1107,8 @@ grpc::Status AudioGraphControlService::CreateTrack(grpc::ServerContext* /*contex
                                                    const sushi_rpc::CreateTrackRequest* request,
                                                    sushi_rpc::GenericVoidValue* /*response*/)
 {
-    auto status = _controller->create_track(request->name(), request->channels());
+    auto thread = (request->thread().has_value() ? std::optional<int>(request->thread().value()) : std::nullopt);
+    auto status = _controller->create_track(request->name(), request->channels(), thread);
     return to_grpc_status(status);
 }
 
@@ -1113,7 +1116,8 @@ grpc::Status AudioGraphControlService::CreateMultibusTrack(grpc::ServerContext* 
                                                            const sushi_rpc::CreateMultibusTrackRequest* request,
                                                            sushi_rpc::GenericVoidValue* /*response*/)
 {
-    auto status = _controller->create_multibus_track(request->name(), request->buses());
+    auto thread = (request->thread().has_value() ? std::optional<int>(request->thread().value()) : std::nullopt);
+    auto status = _controller->create_multibus_track(request->name(), request->buses(), thread);
     return to_grpc_status(status);
 }
 

@@ -382,11 +382,11 @@ void SessionController::_restore_tracks(std::vector<control::TrackState> tracks)
             case control::TrackType::REGULAR:
                 if (track.buses > 1)
                 {
-                    std::tie(status, track_id) = _engine->create_multibus_track(track.name, track.buses, std::optional<int>());
+                    std::tie(status, track_id) = _engine->create_multibus_track(track.name, track.buses, track.thread);
                 }
                 else
                 {
-                    std::tie(status, track_id) = _engine->create_track(track.name, track.channels, std::optional<int>());
+                    std::tie(status, track_id) = _engine->create_track(track.name, track.channels, track.thread);
                 }
                 break;
 

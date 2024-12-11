@@ -85,7 +85,7 @@ TEST_F(AudioGraphControllerTest, TestGettingProcessors)
 
 TEST_F(AudioGraphControllerTest, TestCreatingAndRemovingTracks)
 {
-    auto status = _module_under_test->create_track("Track 2", 2);
+    auto status = _module_under_test->create_track("Track 2", 2, std::optional<int>());
     ASSERT_EQ(control::ControlStatus::OK, status);
 
     auto execution_status1 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
@@ -97,7 +97,7 @@ TEST_F(AudioGraphControllerTest, TestCreatingAndRemovingTracks)
     EXPECT_EQ(2, tracks[1]->input_channels());
     EXPECT_EQ(2, tracks[1]->output_channels());
 
-    status = _module_under_test->create_multibus_track("Track 3", 2);
+    status = _module_under_test->create_multibus_track("Track 3", 2, std::optional<int>());
     ASSERT_EQ(control::ControlStatus::OK, status);
 
     auto execution_status2 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());

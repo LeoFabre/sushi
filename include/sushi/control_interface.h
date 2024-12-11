@@ -142,6 +142,7 @@ struct TrackInfo
     std::string name;
     int         channels;
     int         buses;
+    int         thread;
     TrackType   type;
     std::vector<int> processors;
 };
@@ -353,6 +354,7 @@ struct TrackState
     std::string     label;
     int             channels;
     int             buses;
+    int             thread;
     TrackType       type;
     ProcessorState  track_state;
     std::vector<PluginClass>    processors;
@@ -455,8 +457,8 @@ public:
     virtual ControlStatus set_processor_bypass_state(int processor_id, bool bypass_enabled) = 0;
     virtual ControlStatus set_processor_state(int processor_id, const ProcessorState& state) = 0;
 
-    virtual ControlStatus create_track(const std::string& name, int channels) = 0;
-    virtual ControlStatus create_multibus_track(const std::string& name, int buses) = 0;
+    virtual control::ControlStatus create_track(const std::string& name, int channels, std::optional<int> thread) = 0;
+    virtual ControlStatus create_multibus_track(const std::string& name, int buses, std::optional<int> thread) = 0;
     virtual ControlStatus create_pre_track(const std::string& name) = 0;
     virtual ControlStatus create_post_track(const std::string& name) = 0;
     virtual ControlStatus move_processor_on_track(int processor_id, int source_track_id, int dest_track_id, std::optional<int> before_processor_id) = 0;
