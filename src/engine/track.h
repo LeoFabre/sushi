@@ -145,9 +145,18 @@ public:
      * @brief Return the number of stereo buses of the track.
      * @return The number of stereo buses on the track.
      */
-    int buses() const
+    [[nodiscard]] int buses() const
     {
         return _buses;
+    }
+
+    /**
+     * @brief Return the current audio thread processing the track.
+     * @return The audio thread processing the track.
+     */
+    [[nodiscard]] int thread() const
+    {
+        return _current_processing_thread;
     }
 
     /**
@@ -165,7 +174,7 @@ public:
         reinterpret_cast<Track*>(arg)->render();
     }
 
-    TrackType type() const
+    [[nodiscard]] TrackType type() const
     {
         return _type;
     }

@@ -260,6 +260,24 @@ TEST_F(TestEngine, TestCreatePreAndPostTracks)
     ASSERT_NE(EngineReturnStatus::OK, status);
 }
 
+TEST_F(TestEngine, TestCreateTrackOnThread)
+{
+    _module_under_test = std::make_unique<AudioEngine>(SAMPLE_RATE, 2);
+    _processors = _module_under_test->processor_container();
+
+    auto [track_1_status, track_1_id] = _module_under_test->create_track("main", 2, 1);
+    auto [track_2_status, track_2_id] = _module_under_test->create_track("two", 2, std::nullopt);
+
+    ASSERT_EQ(EngineReturnStatus::OK, track_1_status);
+    ASSERT_EQ(EngineReturnStatus::OK, track_2_status);
+
+    auto track_1 = _processors->track(track_1_id);
+    auto track_2 = _processors->track(track_2_id);
+
+    EXPECT_EQ(1, track_1->thread());
+    EXPECT_EQ(0, track_2->thread());
+}
+
 TEST_F(TestEngine, TestAddAndRemovePlugin)
 {
     /* Test adding Internal plugins */
