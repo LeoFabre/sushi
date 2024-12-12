@@ -23,6 +23,7 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 
 #include "sushi/sushi_time.h"
 #include "sushi/types.h"
@@ -764,14 +765,24 @@ class EngineTimingNotificationEvent : public EngineNotificationEvent
 {
 public:
     EngineTimingNotificationEvent(const performance::ProcessTimings& timings,
+                                  const std::vector<performance::ProcessTimings>& thread_timings,
                                   Time timestamp) : EngineNotificationEvent(timestamp),
-                                                    _timings(timings){}
+                                                    _timings(timings),
+                                                    _thread_timings{thread_timings} {}
+
+    EngineTimingNotificationEvent(const performance::ProcessTimings& timings,
+                                  std::vector<performance::ProcessTimings>&& thread_timings,
+                                  Time timestamp) : EngineNotificationEvent(timestamp),
+                                                    _timings(timings),
+                                                    _thread_timings(std::move(thread_timings)) {}
 
     [[nodiscard]] bool is_timing_notification() const override {return true;}
-    [[nodiscard]] const performance::ProcessTimings& timings() const {return _timings;}
+    [[nodiscard]] const performance::ProcessTimings& main_timings() const {return _timings;}
+    [[nodiscard]] const std::vector<performance::ProcessTimings>& thread_timings() const {return _thread_timings;}
 
 private:
     performance::ProcessTimings _timings;
+    std::vector<performance::ProcessTimings> _thread_timings;
 };
 
 class EngineTimingTickNotificationEvent : public EngineNotificationEvent

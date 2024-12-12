@@ -30,11 +30,15 @@ private:
 class CpuTimingNotification : public ControlNotification
 {
 public:
-    CpuTimingNotification(CpuTimings timings, Time timestamp)
+    CpuTimingNotification(const CpuTimings& timings, Time timestamp)
             : ControlNotification(NotificationType::CPU_TIMING_UPDATE, timestamp),
               _cpu_timings(timings) {}
 
-    CpuTimings cpu_timings() const {return _cpu_timings;}
+    CpuTimingNotification(CpuTimings&& timings, Time timestamp)
+            : ControlNotification(NotificationType::CPU_TIMING_UPDATE, timestamp),
+              _cpu_timings(std::move(timings)) {}
+
+    const CpuTimings& cpu_timings() const {return _cpu_timings;}
 
 private:
     CpuTimings _cpu_timings;

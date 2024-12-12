@@ -218,7 +218,6 @@ inline void to_grpc(PropertyInfo& dest, const sushi::control::PropertyInfo& src)
     dest.set_label(src.label);
 }
 
-
 inline void to_grpc(sushi_rpc::ProcessorInfo& dest, const sushi::control::ProcessorInfo& src)
 {
     dest.set_id(src.id);
@@ -271,11 +270,20 @@ inline void to_grpc(sushi_rpc::TrackInfo& dest, const sushi::control::TrackInfo&
     }
 }
 
-inline void to_grpc(sushi_rpc::CpuTimings& dest, const sushi::control::CpuTimings& src)
+inline void to_grpc(sushi_rpc::Timings& dest, const sushi::control::Timings& src)
 {
     dest.set_average(src.avg);
     dest.set_min(src.min);
     dest.set_max(src.max);
+}
+
+inline void to_grpc(sushi_rpc::CpuTimings& dest, const sushi::control::CpuTimings& src)
+{
+    to_grpc(*dest.mutable_main(), src.main);
+    for (const auto& thread : src.threads)
+    {
+        to_grpc(*dest.mutable_threads()->Add(), thread);
+    }
 }
 
 inline void to_grpc(sushi_rpc::AudioConnection& dest, const sushi::control::AudioConnection& src)
@@ -872,7 +880,7 @@ grpc::Status TimingControlService::GetEngineTimings(grpc::ServerContext* /*conte
 
 grpc::Status TimingControlService::GetTrackTimings(grpc::ServerContext* /*context*/,
                                                    const sushi_rpc::TrackIdentifier* request,
-                                                   sushi_rpc::CpuTimings* response)
+                                                   sushi_rpc::Timings* response)
 {
     auto [status, timings] = _controller->get_track_timings(request->id());
     if (status != sushi::control::ControlStatus::OK)
@@ -885,7 +893,7 @@ grpc::Status TimingControlService::GetTrackTimings(grpc::ServerContext* /*contex
 
 grpc::Status TimingControlService::GetProcessorTimings(grpc::ServerContext* /*context*/,
                                                        const sushi_rpc::ProcessorIdentifier* request,
-                                                       sushi_rpc::CpuTimings* response)
+                                                       sushi_rpc::Timings* response)
 {
     auto [status, timings] = _controller->get_processor_timings(request->id());
     if (status != sushi::control::ControlStatus::OK)
@@ -2156,10 +2164,7 @@ void NotificationControlService::_forward_cpu_timing_notification_to_subscribers
 {
     auto typed_notification = static_cast<const sushi::control::CpuTimingNotification*>(notification);
     auto notification_content = std::make_shared<CpuTimings>();
-    auto timings = typed_notification->cpu_timings();
-    notification_content->set_average(timings.avg);
-    notification_content->set_min(timings.min);
-    notification_content->set_max(timings.max);
+    to_grpc(*notification_content, typed_notification->cpu_timings());
 
     std::scoped_lock lock(_timing_subscriber_lock);
     for (auto& subscriber : _timing_subscribers)

@@ -29,7 +29,7 @@ namespace sushi::internal::engine::controller_impl {
 TimingController::TimingController(engine::BaseEngine* engine) : _performance_timer(engine->performance_timer())
 {}
 
-inline control::CpuTimings to_external(performance::ProcessTimings& internal)
+inline control::Timings to_external(performance::ProcessTimings& internal)
 {
     return {internal.avg_case, internal.min_case, internal.max_case};
 }
@@ -50,16 +50,25 @@ void TimingController::set_timing_statistics_enabled(bool enabled)
 std::pair<control::ControlStatus, control::CpuTimings> TimingController::get_engine_timings() const
 {
     ELKLOG_LOG_DEBUG("get_engine_timings called, returning ");
-    return _get_timings(engine::ENGINE_TIMING_ID);
+    control::CpuTimings timings;
+    timings.main = _get_timings(engine::ENGINE_TIMING_ID).second;
+    int thread_id = ENGINE_TIMING_ID - 1;
+    auto [status, thread_timings] = _get_timings(thread_id);
+    while(status == control::ControlStatus::OK)
+    {
+        timings.threads.push_back(thread_timings);
+        std::tie(status, thread_timings) = _get_timings(--thread_id);
+    }
+    return {control::ControlStatus::OK, timings};
 }
 
-std::pair<control::ControlStatus, control::CpuTimings> TimingController::get_track_timings(int track_id) const
+std::pair<control::ControlStatus, control::Timings> TimingController::get_track_timings(int track_id) const
 {
     ELKLOG_LOG_DEBUG("get_track_timings called, returning ");
     return _get_timings(track_id);
 }
 
-std::pair<control::ControlStatus, control::CpuTimings> TimingController::get_processor_timings(int processor_id) const
+std::pair<control::ControlStatus, control::Timings> TimingController::get_processor_timings(int processor_id) const
 {
     ELKLOG_LOG_DEBUG("get_processor_timings called, returning ");
     return _get_timings(processor_id);
@@ -85,7 +94,7 @@ control::ControlStatus TimingController::reset_processor_timings(int processor_i
     return reset_track_timings(processor_id);
 }
 
-std::pair<control::ControlStatus, control::CpuTimings> TimingController::_get_timings(int node) const
+std::pair<control::ControlStatus, control::Timings> TimingController::_get_timings(int node) const
 {
     if (_performance_timer->enabled())
     {

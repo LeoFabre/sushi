@@ -41,9 +41,9 @@ public:
 
     std::pair<control::ControlStatus, control::CpuTimings> get_engine_timings() const override;
 
-    std::pair<control::ControlStatus, control::CpuTimings> get_track_timings(int track_id) const override;
+    std::pair<control::ControlStatus, control::Timings> get_track_timings(int track_id) const override;
 
-    std::pair<control::ControlStatus, control::CpuTimings> get_processor_timings(int processor_id) const override;
+    std::pair<control::ControlStatus, control::Timings> get_processor_timings(int processor_id) const override;
 
     control::ControlStatus reset_all_timings() override;
 
@@ -52,7 +52,7 @@ public:
     control::ControlStatus reset_processor_timings(int processor_id) override;
 
 private:
-    std::pair<control::ControlStatus, control::CpuTimings> _get_timings(int node) const;
+    std::pair<control::ControlStatus, control::Timings> _get_timings(int node) const;
 
     performance::BasePerformanceTimer*  _performance_timer;
 };

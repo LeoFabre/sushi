@@ -27,6 +27,7 @@
 #include "twine/twine.h"
 
 #include "engine/track.h"
+#include "library/performance_timer.h"
 
 namespace sushi::internal::engine {
 
@@ -42,12 +43,14 @@ public:
      * @param max_no_tracks The maximum number of tracks to reserve space for. As
      *                      add() and remove() could be called from an rt thread
      *                      they must not (de)allocate memory.
+     * @param timer A timer used to measure the time it takes to process an audio chunk
      * @param sample_rate The sample_rate - used for calculating audio thread periodicity. Only used on Apple.
      * @param device_name The Audio Device Name - only used on Apple, and will be unused on other platforms.
      * @param debug_mode_switches Enable xenomai-specific thread debugging
      */
     AudioGraph(int threads,
                int max_no_tracks,
+               performance::PerformanceTimer* timer,
                float sample_rate,
                std::optional<std::string> device_name = std::nullopt,
                bool debug_mode_switches = false);
@@ -111,8 +114,16 @@ public:
 
 private:
     friend AudioGraphAccessor;
+    friend void external_render_callback(void*);
 
-    std::vector<std::vector<Track*>>   _audio_graph;
+    struct GraphNode
+    {
+        std::vector<Track*>             tracks;
+        performance::PerformanceTimer*  timer;
+        int                             thread_id;
+    };
+
+    std::vector<GraphNode>             _audio_graph;
     std::unique_ptr<twine::WorkerPool> _worker_pool;
     std::vector<RtEventFifo<>>         _event_outputs;
     std::vector<int>                   _core_ids;

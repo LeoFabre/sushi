@@ -72,11 +72,17 @@ struct TimeSignature
     int denominator;
 };
 
-struct CpuTimings
+struct Timings
 {
     float avg;
     float min;
     float max;
+};
+
+struct CpuTimings
+{
+    Timings main;
+    std::vector<Timings> threads;
 };
 
 enum class PluginType
@@ -413,11 +419,12 @@ public:
     virtual void                                    set_timing_statistics_enabled(bool enabled) = 0;
 
     [[nodiscard]] virtual std::pair<ControlStatus, CpuTimings> get_engine_timings() const = 0;
-    [[nodiscard]] virtual std::pair<ControlStatus, CpuTimings> get_track_timings(int track_id) const = 0;
-    [[nodiscard]] virtual std::pair<ControlStatus, CpuTimings> get_processor_timings(int processor_id) const = 0;
-    virtual ControlStatus                                      reset_all_timings() = 0;
-    virtual ControlStatus                                      reset_track_timings(int track_id) = 0;
-    virtual ControlStatus                                      reset_processor_timings(int processor_id) = 0;
+    [[nodiscard]] virtual std::pair<ControlStatus, Timings>    get_track_timings(int track_id) const = 0;
+    [[nodiscard]] virtual std::pair<ControlStatus, Timings>    get_processor_timings(int processor_id) const = 0;
+
+    virtual ControlStatus      reset_all_timings() = 0;
+    virtual ControlStatus      reset_track_timings(int track_id) = 0;
+    virtual ControlStatus      reset_processor_timings(int processor_id) = 0;
 
 protected:
     TimingController() = default;

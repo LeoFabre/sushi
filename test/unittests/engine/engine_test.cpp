@@ -217,8 +217,8 @@ TEST_F(TestEngine, TestCreateEmptyTrack)
     AudioGraph& audio_graph = _accessor->audio_graph();
     AudioGraphAccessor _ag_accessor {audio_graph};
 
-    ASSERT_EQ(_ag_accessor.audio_graph()[0].size(), 1u);
-    ASSERT_EQ(_ag_accessor.audio_graph()[0][0]->name(), "left");
+    ASSERT_EQ(_ag_accessor.audio_graph()[0].tracks.size(), 1u);
+    ASSERT_EQ(_ag_accessor.audio_graph()[0].tracks[0]->name(), "left");
 
     /* Test invalid name */
     std::tie(status, track_id) = _module_under_test->create_track("left", 1, std::nullopt);
@@ -230,7 +230,7 @@ TEST_F(TestEngine, TestCreateEmptyTrack)
     status = _module_under_test->delete_track(left_track_id);
     ASSERT_EQ(EngineReturnStatus::OK, status);
     ASSERT_FALSE(_processors->processor_exists("left"));
-    ASSERT_EQ(_ag_accessor.audio_graph()[0].size(), 0u);
+    ASSERT_EQ(_ag_accessor.audio_graph()[0].tracks.size(), 0u);
 
     /* Test invalid number of channels */
     std::tie(status, track_id) = _module_under_test->create_track("left", MAX_TRACK_CHANNELS + 1, std::nullopt);
@@ -316,7 +316,7 @@ TEST_F(TestEngine, TestAddAndRemovePlugin)
 
     AudioGraph& audio_graph = _accessor->audio_graph();
     AudioGraphAccessor _ag_accessor {audio_graph};
-    TrackAccessor _track_accessor_0 {*(_ag_accessor.audio_graph()[0][0])};
+    TrackAccessor _track_accessor_0 {*(_ag_accessor.audio_graph()[0].tracks[0])};
 
     ASSERT_EQ(2u, _track_accessor_0.processors().size());
     ASSERT_EQ("synth", _track_accessor_0.processors()[0]->name());
@@ -347,7 +347,7 @@ TEST_F(TestEngine, TestAddAndRemovePlugin)
     status = _module_under_test->delete_plugin(gain_id);
     ASSERT_EQ(EngineReturnStatus::OK, status);
 
-    TrackAccessor _track_accessor_1 {*(_ag_accessor.audio_graph()[0][1])};
+    TrackAccessor _track_accessor_1 {*(_ag_accessor.audio_graph()[0].tracks[1])};
 
     ASSERT_FALSE(_processors->processor_exists("gain"));
     ASSERT_EQ(0u, _track_accessor_0.processors().size());
@@ -449,7 +449,7 @@ TEST_F(TestEngine, TestRealtimeConfiguration)
 
     AudioGraph& audio_graph = _accessor->audio_graph();
     AudioGraphAccessor _ag_accessor {audio_graph};
-    TrackAccessor _track_accessor_0 {*(_ag_accessor.audio_graph()[0][0])};
+    TrackAccessor _track_accessor_0 {*(_ag_accessor.audio_graph()[0].tracks[0])};
 
     ASSERT_EQ(1u, _track_accessor_0.processors().size());
 

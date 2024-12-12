@@ -34,16 +34,19 @@ constexpr bool DISABLE_DENORMALS = true;
  */
 void external_render_callback(void* data)
 {
-    auto tracks = reinterpret_cast<std::vector<sushi::internal::engine::Track*>*>(data);
+    auto node = reinterpret_cast<sushi::internal::engine::AudioGraph::GraphNode*>(data);
+    auto start = node->timer->start_timer();
 
-    for (auto track : *tracks)
+    for (auto track : node->tracks)
     {
         track->render();
     }
+    node->timer->stop_timer(start, (-2 - node->thread_id)); // Thread ids are counted backwards from -2
 }
 
 AudioGraph::AudioGraph(int threads,
                        int max_no_tracks,
+                       performance::PerformanceTimer* timer,
                        [[maybe_unused]] float sample_rate,
                        [[maybe_unused]] std::optional<std::string> device_name,
                        bool debug_mode_switches) : _audio_graph(threads),
@@ -64,16 +67,17 @@ AudioGraph::AudioGraph(int threads,
             apple_data.device_name = device_name.value();
         }
 #endif
-
+        int thread_id = 0;
         _worker_pool = twine::WorkerPool::create_worker_pool(_cores,
                                                              apple_data,
                                                              DISABLE_DENORMALS,
                                                              debug_mode_switches);
 
-        for (auto& tracks : _audio_graph)
+        for (auto& node : _audio_graph)
         {
+
             auto status = _worker_pool->add_worker(external_render_callback,
-                                                   &tracks);
+                                                   &node);
 
             if (status.first != twine::WorkerPoolStatus::OK)
             {
@@ -82,7 +86,9 @@ AudioGraph::AudioGraph(int threads,
 #endif
             }
 
-            tracks.reserve(max_no_tracks);
+            node.tracks.reserve(max_no_tracks);
+            node.timer = timer;
+            node.thread_id = thread_id++;
         }
         std::string cpu_ids;
         for (const auto& info : _worker_pool->core_info())
@@ -95,14 +101,14 @@ AudioGraph::AudioGraph(int threads,
     }
     else
     {
-        _audio_graph[0].reserve(max_no_tracks);
+        _audio_graph[0].tracks.reserve(max_no_tracks);
         _core_ids.push_back(0);
     }
 }
 
 bool AudioGraph::add(Track* track)
 {
-    auto& slot = _audio_graph[_current_core];
+    auto& slot = _audio_graph[_current_core].tracks;
     if (slot.size() < slot.capacity())
     {
         track->set_event_output(&_event_outputs[_current_core]);
@@ -118,7 +124,7 @@ bool AudioGraph::add_to_thread(Track* track, int thread)
 {
     assert(thread < _cores);
     // TODO - Clamp thread or return false to avoid segfault?
-    auto& slot = _audio_graph[thread];
+    auto& slot = _audio_graph[thread].tracks;
     if (slot.size() < slot.capacity())
     {
         track->set_event_output(&_event_outputs[thread]);
@@ -131,13 +137,13 @@ bool AudioGraph::add_to_thread(Track* track, int thread)
 
 bool AudioGraph::remove(Track* track)
 {
-    for (auto& slot : _audio_graph)
+    for (auto& node : _audio_graph)
     {
-        for (auto i = slot.begin(); i != slot.end(); ++i)
+        for (auto i = node.tracks.begin(); i != node.tracks.end(); ++i)
         {
             if (*i == track)
             {
-                slot.erase(i);
+                node.tracks.erase(i);
                 track->set_active_rt_processing(false, 0);
                 return true;
             }
@@ -150,7 +156,7 @@ void AudioGraph::render()
 {
     if (_cores == 1)
     {
-        for (auto& track : _audio_graph[0])
+        for (auto& track : _audio_graph[0].tracks)
         {
             track->render();
         }

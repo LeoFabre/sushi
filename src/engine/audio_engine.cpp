@@ -92,7 +92,7 @@ AudioEngine::AudioEngine(float sample_rate,
                          std::optional<std::string> device_name,
                          bool debug_mode_sw,
                          dispatcher::BaseEventDispatcher* event_dispatcher) : BaseEngine::BaseEngine(sample_rate),
-                                                          _audio_graph(rt_threads, MAX_TRACKS, sample_rate, device_name, debug_mode_sw),
+                                                          _audio_graph(rt_threads, MAX_TRACKS, &_process_timer, sample_rate, device_name, debug_mode_sw),
                                                           _audio_in_connections(MAX_AUDIO_CONNECTIONS),
                                                           _audio_out_connections(MAX_AUDIO_CONNECTIONS),
                                                           _transport(sample_rate, &_main_out_queue),
@@ -1197,10 +1197,18 @@ void AudioEngine::update_timings()
 {
     if (_process_timer.enabled())
     {
+        std::vector<performance::ProcessTimings> thread_timings;
         auto engine_timings = _process_timer.timings_for_node(ENGINE_TIMING_ID);
+
         if (engine_timings.has_value())
         {
-            _event_dispatcher->post_event(std::make_unique<EngineTimingNotificationEvent>(*engine_timings, IMMEDIATE_PROCESS));
+            int thread_id = ENGINE_TIMING_ID; // Thread ids are counted backwards from the main cpu id
+            std::optional<performance::ProcessTimings> timings;
+            while ((timings = _process_timer.timings_for_node(--thread_id)).has_value())
+            {
+                thread_timings.push_back(timings.value());
+            }
+            _event_dispatcher->post_event(std::make_unique<EngineTimingNotificationEvent>(*engine_timings, thread_timings, IMMEDIATE_PROCESS));
         }
 
         _log_timing_print_counter += 1;
@@ -1221,6 +1229,12 @@ void AudioEngine::update_timings()
             {
                 ELKLOG_LOG_INFO("Engine total: avg: {}%, min: {}%, max: {}%",
                                 engine_timings->avg_case * 100.0f, engine_timings->min_case * 100.0f, engine_timings->max_case * 100.0f);
+            }
+            [[maybe_unused]] int thread_id = 0;
+            for ([[maybe_unused]] const auto& timings : thread_timings)
+            {
+                ELKLOG_LOG_INFO("Audio thread: {}, avg: {}%, min: {}%, max: {}%", thread_id++,
+                                timings.avg_case * 100.0f, timings.min_case * 100.0f, timings.max_case * 100.0f);
             }
             _log_timing_print_counter = 0;
         }
