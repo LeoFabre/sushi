@@ -86,7 +86,7 @@ TEST_F(TestAudioGraph, TestMultiCoreOperation)
     ASSERT_EQ(3, _module_under_test->threads());
 
     // Tracks should end up in slot 0 and 1
-    ASSERT_EQ(3u, _accessor->audio_graph().tracks.size());
+    ASSERT_EQ(3u, _accessor->audio_graph().size());
     ASSERT_EQ(1u, _accessor->audio_graph()[0].tracks.size());
     ASSERT_EQ(1u, _accessor->audio_graph()[1].tracks.size());
     ASSERT_EQ(0u, _accessor->audio_graph()[2].tracks.size());
