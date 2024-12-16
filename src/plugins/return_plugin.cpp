@@ -46,32 +46,37 @@ ReturnPlugin::~ReturnPlugin()
     }
 }
 
-void ReturnPlugin::send_audio(const ChunkSampleBuffer& buffer, int start_channel, float gain)
+void ReturnPlugin::send_audio(const ChunkSampleBuffer& buffer, int start_channel, float gain, int thread_id)
 {
     std::scoped_lock<SpinLock> lock(_buffer_lock);
-
     _maybe_swap_buffers(_host_control.transport()->current_process_time());
+
+    /* If the sender invoking this function is on the same thread, and process_audio() has not yet been called, we can
+     * copy directly to _active_out (i.e. zero delay), if not, we must copy to _active_in (with 1 buffer delay) */
+    auto target_buffer = (thread_id == _current_processing_thread && !_processed_this_block)? _active_out : _active_in;
 
     int max_channels = std::max(0, std::min(buffer.channel_count(), _current_output_channels - start_channel));
 
     for (int c = 0 ; c < max_channels; ++c)
     {
-        _active_in->add_with_gain(start_channel++, c, buffer, gain);
+        target_buffer->add_with_gain(start_channel++, c, buffer, gain);
     }
 }
 
 void ReturnPlugin::send_audio_with_ramp(const ChunkSampleBuffer& buffer, int start_channel,
-                                        float start_gain, float end_gain)
+                                        float start_gain, float end_gain, int thread_id)
 {
     std::scoped_lock<SpinLock> lock(_buffer_lock);
-
     _maybe_swap_buffers(_host_control.transport()->current_process_time());
+
+    /* See comment in send_audio() */
+    auto target_buffer = (thread_id == _current_processing_thread && !_processed_this_block)? _active_out : _active_in;
 
     int max_channels = std::max(0, std::min(buffer.channel_count(), _current_output_channels - start_channel));
 
     for (int c = 0 ; c < max_channels; ++c)
     {
-        _active_in->add_with_ramp(start_channel++, c, buffer, start_gain, end_gain);
+        target_buffer->add_with_ramp(start_channel++, c, buffer, start_gain, end_gain);
     }
 }
 
@@ -160,6 +165,7 @@ void ReturnPlugin::process_audio(const ChunkSampleBuffer& /*in_buffer*/, ChunkSa
     {
         out_buffer.clear();
     }
+    _processed_this_block = true;
 }
 
 bool ReturnPlugin::bypassed() const
@@ -189,6 +195,7 @@ void inline ReturnPlugin::_maybe_swap_buffers(Time current_time)
     if (last_time != current_time)
     {
         _last_process_time.store(current_time, std::memory_order_release);
+        _processed_this_block = false;
         _swap_buffers();
     }
 }

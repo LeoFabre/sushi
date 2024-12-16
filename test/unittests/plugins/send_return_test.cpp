@@ -96,9 +96,11 @@ protected:
     {
         ASSERT_EQ(ProcessorReturnCode::OK, _send_instance.init(TEST_SAMPLERATE));
         _send_instance.set_channels(2, 2);
+        _send_instance.set_active_rt_processing(true, 0);
 
         ASSERT_EQ(ProcessorReturnCode::OK, _return_instance.init(TEST_SAMPLERATE));
-        _return_instance.set_channels(2, 2);
+        _send_instance.set_channels(2, 2);
+        _return_instance.set_active_rt_processing(true, 1);
     }
 
     SendReturnFactory   _factory;
@@ -150,6 +152,28 @@ TEST_F(TestSendReturnPlugins, TestProcessing)
 
     // Swap manually and verify that signal is returned
     _return_accessor.swap_buffers();
+    _return_instance.process_audio(buffer_1, buffer_2);
+    test_utils::assert_buffer_value(1.0f, buffer_2);
+}
+
+TEST_F(TestSendReturnPlugins, TestZeroDelayProcessing)
+{
+    ChunkSampleBuffer buffer_1(2);
+    ChunkSampleBuffer buffer_2(2);
+    test_utils::fill_sample_buffer(buffer_1, 1.0f);
+
+    // Set the send plugin to use the same thread as the return plugin
+    _send_instance.set_active_rt_processing(true, 1);
+
+    // Test that processing without destination doesn't break and passes though
+    _send_instance.process_audio(buffer_1, buffer_2);
+    test_utils::assert_buffer_value(1.0f, buffer_2);
+
+    _send_accessor.set_destination(&_return_instance);
+    _send_instance.process_audio(buffer_1, buffer_2);
+    buffer_2.clear();
+
+    // Don't swap, the send plugin should have immediately copied to the output without delay
     _return_instance.process_audio(buffer_1, buffer_2);
     test_utils::assert_buffer_value(1.0f, buffer_2);
 }
@@ -266,7 +290,7 @@ TEST_F(TestSendReturnPlugins, TestRampedProcessing)
     test_utils::fill_sample_buffer(buffer_1, 1.0f);
 
     // Test only ramping
-    _return_instance.send_audio_with_ramp(buffer_1, 0, 2.0f, 0.0f);
+    _return_instance.send_audio_with_ramp(buffer_1, 0, 2.0f, 0.0f, THREAD_ID_UNKNOWN);
     _return_accessor.swap_buffers();
     _return_instance.process_audio(buffer_1, buffer_2);
     EXPECT_NEAR(2.0f, buffer_2.channel(0)[0], 0.01);

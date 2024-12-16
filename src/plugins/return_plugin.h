@@ -37,6 +37,8 @@ class SendReturnFactory;
 
 namespace send_plugin { class SendPlugin; }
 
+constexpr int THREAD_ID_UNKNOWN = -1;
+
 namespace return_plugin {
 
 class Accessor;
@@ -48,11 +50,9 @@ public:
 
     ~ReturnPlugin() override;
 
-    int return_id() const {return _return_id;}
+    void send_audio(const ChunkSampleBuffer& buffer, int start_channel, float gain, int thread_id);
 
-    void send_audio(const ChunkSampleBuffer& buffer, int start_channel, float gain);
-
-    void send_audio_with_ramp(const ChunkSampleBuffer& buffer, int start_channel, float start_gain, float end_gain);
+    void send_audio_with_ramp(const ChunkSampleBuffer& buffer, int start_channel, float start_gain, float end_gain, int thread_id);
 
     void add_sender(send_plugin::SendPlugin* sender);
 
@@ -85,15 +85,14 @@ private:
     void inline _maybe_swap_buffers(Time current_time);
 
     float                                 _sample_rate;
-    int                                   _return_id;
     SendReturnFactory*                    _manager;
 
     std::array<ChunkSampleBuffer, 2>      _buffers;
     ChunkSampleBuffer*                    _active_in{&_buffers[0]};
     ChunkSampleBuffer*                    _active_out{&_buffers[1]};
+    bool                                  _processed_this_block{false};
 
     SpinLock                              _buffer_lock;
-
 
     std::vector<send_plugin::SendPlugin*> _senders;
 
