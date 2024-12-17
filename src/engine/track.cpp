@@ -125,7 +125,7 @@ bool Track::add(Processor* processor, std::optional<ObjectId> before_position)
     if (added)
     {
         processor->set_event_output(this);
-        processor->set_active_rt_processing(true);
+        processor->set_active_rt_processing(true, _current_processing_thread);
     }
     return added;
 }

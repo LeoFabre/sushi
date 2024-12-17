@@ -99,7 +99,7 @@ protected:
         _send_instance.set_active_rt_processing(true, 0);
 
         ASSERT_EQ(ProcessorReturnCode::OK, _return_instance.init(TEST_SAMPLERATE));
-        _send_instance.set_channels(2, 2);
+        _return_instance.set_channels(2, 2);
         _return_instance.set_active_rt_processing(true, 1);
     }
 
