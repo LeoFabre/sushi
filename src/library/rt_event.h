@@ -771,14 +771,14 @@ public:
     const TrackRtEvent* track_event() const
     {
         assert(_track_event.type() == RtEventType::ADD_TRACK ||
-               _processor_reorder_event.type() == RtEventType::REMOVE_TRACK);
+               _track_event.type() == RtEventType::REMOVE_TRACK);
         return &_track_event;
     }
 
     TrackRtEvent* track_event()
     {
         assert(_track_event.type() == RtEventType::ADD_TRACK ||
-               _processor_reorder_event.type() == RtEventType::REMOVE_TRACK);
+               _track_event.type() == RtEventType::REMOVE_TRACK);
         return &_track_event;
     }
 
@@ -807,9 +807,7 @@ public:
     {
         assert(_processor_reorder_event.type() == RtEventType::REMOVE_PROCESSOR ||
                _processor_reorder_event.type() == RtEventType::ADD_PROCESSOR_TO_TRACK ||
-               _processor_reorder_event.type() == RtEventType::REMOVE_PROCESSOR_FROM_TRACK ||
-               _processor_reorder_event.type() == RtEventType::ADD_TRACK ||
-               _processor_reorder_event.type() == RtEventType::REMOVE_TRACK);
+               _processor_reorder_event.type() == RtEventType::REMOVE_PROCESSOR_FROM_TRACK)
         ;
         return &_processor_reorder_event;
     }
