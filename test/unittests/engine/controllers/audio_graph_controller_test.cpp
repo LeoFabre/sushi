@@ -22,7 +22,7 @@ protected:
         bool debug_mode_sw = false;
         _audio_engine = std::make_unique<AudioEngine>(TEST_SAMPLE_RATE, 1, "", debug_mode_sw, new EventDispatcherMockup());
         _event_dispatcher_mockup = static_cast<EventDispatcherMockup*>(_audio_engine->event_dispatcher());
-        _module_under_test = std::make_unique<AudioGraphController>(_audio_engine.get());
+        _module_under_test = std::make_unique<AudioGraphController>(_audio_engine.get(), _event_dispatcher_mockup);
 
         _audio_engine->set_audio_channels(8, 8);
 
@@ -86,7 +86,7 @@ TEST_F(AudioGraphControllerTest, TestGettingProcessors)
 TEST_F(AudioGraphControllerTest, TestCreatingAndRemovingTracks)
 {
     auto status = _module_under_test->create_track("Track 2", 2);
-    ASSERT_EQ(control::ControlStatus::OK, status);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, status.status);
 
     auto execution_status1 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
     ASSERT_EQ(execution_status1, EventStatus::HANDLED_OK);
@@ -98,19 +98,19 @@ TEST_F(AudioGraphControllerTest, TestCreatingAndRemovingTracks)
     EXPECT_EQ(2, tracks[1]->output_channels());
 
     status = _module_under_test->create_multibus_track("Track 3", 2);
-    ASSERT_EQ(control::ControlStatus::OK, status);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, status.status);
 
     auto execution_status2 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
     ASSERT_EQ(execution_status2, EventStatus::HANDLED_OK);
 
     status = _module_under_test->create_pre_track("Track 4");
-    ASSERT_EQ(control::ControlStatus::OK, status);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, status.status);
 
     auto execution_status_3 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
     ASSERT_EQ(execution_status_3, EventStatus::HANDLED_OK);
 
     status = _module_under_test->create_post_track("Track 5");
-    ASSERT_EQ(control::ControlStatus::OK, status);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, status.status);
 
     auto execution_status_4 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
     ASSERT_EQ(execution_status_4, EventStatus::HANDLED_OK);
@@ -121,7 +121,7 @@ TEST_F(AudioGraphControllerTest, TestCreatingAndRemovingTracks)
     EXPECT_EQ(2, tracks[2]->buses());
 
     status = _module_under_test->delete_track(tracks[2]->id());
-    ASSERT_EQ(control::ControlStatus::OK, status);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, status.status);
 
     auto execution_status_5 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
     ASSERT_EQ(execution_status_5, EventStatus::HANDLED_OK);
@@ -138,7 +138,7 @@ TEST_F(AudioGraphControllerTest, TestCreatingAndRemovingProcessors)
                                                                 control::PluginType::INTERNAL,
                                                                 _track_id,
                                                                 std::nullopt);
-    ASSERT_EQ(control::ControlStatus::OK, status);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, status.status);
 
     auto execution_status1 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
     ASSERT_EQ(execution_status1, EventStatus::HANDLED_OK);
@@ -153,7 +153,7 @@ TEST_F(AudioGraphControllerTest, TestCreatingAndRemovingProcessors)
     ASSERT_EQ(EngineReturnStatus::OK, track_status);
 
     status = _module_under_test->move_processor_on_track(proc_id, _track_id, track_2_id, std::nullopt);
-    ASSERT_EQ(control::ControlStatus::OK, status);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, status.status);
 
     auto execution_status2 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
     ASSERT_EQ(execution_status2, EventStatus::HANDLED_OK);
@@ -163,7 +163,7 @@ TEST_F(AudioGraphControllerTest, TestCreatingAndRemovingProcessors)
 
     // Delete the processor from the new track
     status = _module_under_test->delete_processor_from_track(proc_id, track_2_id);
-    ASSERT_EQ(control::ControlStatus::OK, status);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, status.status);
 
     auto execution_status4 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
     ASSERT_EQ(execution_status4, EventStatus::HANDLED_OK);

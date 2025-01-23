@@ -33,6 +33,7 @@ ELK_DISABLE_UNREACHABLE_CODE
 ELK_POP_WARNING
 
 #include "sushi/control_interface.h"
+#include "sushi/control_notifications.h"
 
 namespace sushi_rpc {
 
@@ -42,6 +43,7 @@ class SubscribeToTrackChangesCallData;
 class SubscribeToProcessorChangesCallData;
 class SubscribeToParameterUpdatesCallData;
 class SubscribeToPropertyUpdatesCallData;
+class SubscribeToAsyncCommandUpdatesCallData;
 
 class SystemControlService : public SystemController::Service
 {
@@ -67,10 +69,10 @@ public:
     grpc::Status GetSyncMode(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::SyncMode* response) override;
     grpc::Status GetTimeSignature(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::TimeSignature* response) override;
     grpc::Status GetTempo(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::GenericFloatValue* response) override;
-    grpc::Status SetTempo(grpc::ServerContext* context, const sushi_rpc::GenericFloatValue* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status SetPlayingMode(grpc::ServerContext* context, const sushi_rpc::PlayingMode* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status SetSyncMode(grpc::ServerContext* context, const sushi_rpc::SyncMode* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status SetTimeSignature(grpc::ServerContext* context, const sushi_rpc::TimeSignature* request, sushi_rpc::GenericVoidValue* response) override;
+    grpc::Status SetTempo(grpc::ServerContext* context, const sushi_rpc::GenericFloatValue* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status SetPlayingMode(grpc::ServerContext* context, const sushi_rpc::PlayingMode* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status SetSyncMode(grpc::ServerContext* context, const sushi_rpc::SyncMode* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status SetTimeSignature(grpc::ServerContext* context, const sushi_rpc::TimeSignature* request, sushi_rpc::CommandResponse* response) override;
 
 private:
     sushi::control::TransportController* _controller;
@@ -82,13 +84,13 @@ public:
     TimingControlService(sushi::control::SushiControl* controller) : _controller{controller->timing_controller()} {}
 
     grpc::Status GetTimingsEnabled(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::GenericBoolValue* response) override;
-    grpc::Status SetTimingsEnabled(grpc::ServerContext* context, const sushi_rpc::GenericBoolValue* request, sushi_rpc::GenericVoidValue* response) override;
+    grpc::Status SetTimingsEnabled(grpc::ServerContext* context, const sushi_rpc::GenericBoolValue* request, sushi_rpc::CommandResponse* response) override;
     grpc::Status GetEngineTimings(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::CpuTimings* response) override;
-    grpc::Status GetTrackTimings(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::CpuTimings* response) override;
-    grpc::Status GetProcessorTimings(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::CpuTimings* response) override;
-    grpc::Status ResetAllTimings(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status ResetTrackTimings(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status ResetProcessorTimings(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
+    grpc::Status GetTrackTimings(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::CpuTimingResponse* response) override;
+    grpc::Status GetProcessorTimings(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::CpuTimingResponse* response) override;
+    grpc::Status ResetAllTimings(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status ResetTrackTimings(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status ResetProcessorTimings(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::CommandResponse* response) override;
 
 private:
     sushi::control::TimingController* _controller;
@@ -99,12 +101,12 @@ class KeyboardControlService : public KeyboardController::Service
 public:
     KeyboardControlService(sushi::control::SushiControl* controller) : _controller{controller->keyboard_controller()} {}
 
-    grpc::Status SendNoteOn(grpc::ServerContext* context, const sushi_rpc::NoteOnRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status SendNoteOff(grpc::ServerContext* context, const sushi_rpc::NoteOffRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status SendNoteAftertouch(grpc::ServerContext* context, const sushi_rpc::NoteAftertouchRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status SendAftertouch(grpc::ServerContext* context, const sushi_rpc::NoteModulationRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status SendPitchBend(grpc::ServerContext* context, const sushi_rpc::NoteModulationRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status SendModulation(grpc::ServerContext* context, const sushi_rpc::NoteModulationRequest* request, sushi_rpc::GenericVoidValue* response) override;
+    grpc::Status SendNoteOn(grpc::ServerContext* context, const sushi_rpc::NoteOnRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status SendNoteOff(grpc::ServerContext* context, const sushi_rpc::NoteOffRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status SendNoteAftertouch(grpc::ServerContext* context, const sushi_rpc::NoteAftertouchRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status SendAftertouch(grpc::ServerContext* context, const sushi_rpc::NoteModulationRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status SendPitchBend(grpc::ServerContext* context, const sushi_rpc::NoteModulationRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status SendModulation(grpc::ServerContext* context, const sushi_rpc::NoteModulationRequest* request, sushi_rpc::CommandResponse* response) override;
 
 private:
     sushi::control::KeyboardController* _controller;
@@ -117,51 +119,26 @@ public:
 
     grpc::Status GetAllProcessors(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::ProcessorInfoList* response) override;
     grpc::Status GetAllTracks(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::TrackInfoList* response) override;
-    grpc::Status GetTrackId(grpc::ServerContext* context, const sushi_rpc::GenericStringValue* request, sushi_rpc::TrackIdentifier* response) override;
-    grpc::Status GetTrackInfo(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::TrackInfo* response) override;
-    grpc::Status GetTrackProcessors(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::ProcessorInfoList* response) override;
-    grpc::Status GetProcessorId(grpc::ServerContext* context, const sushi_rpc::GenericStringValue* request, sushi_rpc::ProcessorIdentifier* response) override;
-    grpc::Status GetProcessorInfo(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::ProcessorInfo* response) override;
-    grpc::Status GetProcessorBypassState(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::GenericBoolValue* response) override;
-    grpc::Status GetProcessorState(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::ProcessorState* response) override;
-    grpc::Status SetProcessorBypassState(grpc::ServerContext* context, const sushi_rpc::ProcessorBypassStateSetRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status SetProcessorState(grpc::ServerContext* context, const sushi_rpc::ProcessorStateSetRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status CreateTrack(grpc::ServerContext* context, const sushi_rpc::CreateTrackRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status CreateMultibusTrack(grpc::ServerContext* context, const sushi_rpc::CreateMultibusTrackRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status CreatePreTrack(grpc::ServerContext* context, const sushi_rpc::CreatePreTrackRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status CreatePostTrack(grpc::ServerContext* context, const sushi_rpc::CreatePostTrackRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status CreateProcessorOnTrack(grpc::ServerContext* context, const sushi_rpc::CreateProcessorRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status MoveProcessorOnTrack(grpc::ServerContext* context, const sushi_rpc::MoveProcessorRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DeleteProcessorFromTrack(grpc::ServerContext* context, const sushi_rpc::DeleteProcessorRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DeleteTrack(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
+    grpc::Status GetTrackId(grpc::ServerContext* context, const sushi_rpc::GenericStringValue* request, sushi_rpc::TrackIdentifierResponse* response) override;
+    grpc::Status GetTrackInfo(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::TrackInfoResponse* response) override;
+    grpc::Status GetTrackProcessors(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::ProcessorInfoListResponse* response) override;
+    grpc::Status GetProcessorId(grpc::ServerContext* context, const sushi_rpc::GenericStringValue* request, sushi_rpc::ProcessorIdentifierResponse* response) override;
+    grpc::Status GetProcessorInfo(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::ProcessorInfoResponse* response) override;
+    grpc::Status GetProcessorBypassState(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::BoolResponse* response) override;
+    grpc::Status GetProcessorState(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::ProcessorStateResponse* response) override;
+    grpc::Status SetProcessorBypassState(grpc::ServerContext* context, const sushi_rpc::ProcessorBypassStateSetRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status SetProcessorState(grpc::ServerContext* context, const sushi_rpc::ProcessorStateSetRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status CreateTrack(grpc::ServerContext* context, const sushi_rpc::CreateTrackRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status CreateMultibusTrack(grpc::ServerContext* context, const sushi_rpc::CreateMultibusTrackRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status CreatePreTrack(grpc::ServerContext* context, const sushi_rpc::CreatePreTrackRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status CreatePostTrack(grpc::ServerContext* context, const sushi_rpc::CreatePostTrackRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status CreateProcessorOnTrack(grpc::ServerContext* context, const sushi_rpc::CreateProcessorRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status MoveProcessorOnTrack(grpc::ServerContext* context, const sushi_rpc::MoveProcessorRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DeleteProcessorFromTrack(grpc::ServerContext* context, const sushi_rpc::DeleteProcessorRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DeleteTrack(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::CommandResponse* response) override;
 
 private:
     sushi::control::AudioGraphController* _controller;
-};
-
-class ParameterControlService : public ParameterController::Service
-{
-public:
-    ParameterControlService(sushi::control::SushiControl* controller) : _controller{controller->parameter_controller()} {}
-
-    grpc::Status GetTrackParameters(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::ParameterInfoList* response) override;
-    grpc::Status GetProcessorParameters(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::ParameterInfoList* response) override;
-    grpc::Status GetParameterId(grpc::ServerContext* context, const sushi_rpc::ParameterIdRequest* request, sushi_rpc::ParameterIdentifier* response) override;
-    grpc::Status GetParameterInfo(grpc::ServerContext* context, const sushi_rpc::ParameterIdentifier* request, sushi_rpc::ParameterInfo* response) override;
-    grpc::Status GetParameterValue(grpc::ServerContext* context, const sushi_rpc::ParameterIdentifier* request, sushi_rpc::GenericFloatValue* response) override;
-    grpc::Status GetParameterValueInDomain(grpc::ServerContext* context, const sushi_rpc::ParameterIdentifier* request, sushi_rpc::GenericFloatValue* response) override;
-    grpc::Status GetParameterValueAsString(grpc::ServerContext* context, const sushi_rpc::ParameterIdentifier* request, sushi_rpc::GenericStringValue* response) override;
-    grpc::Status SetParameterValue(grpc::ServerContext* context, const sushi_rpc::ParameterValue* request, sushi_rpc::GenericVoidValue* response) override;
-
-    grpc::Status GetTrackProperties(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::PropertyInfoList* response) override;
-    grpc::Status GetProcessorProperties(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::PropertyInfoList* response) override;
-    grpc::Status GetPropertyId(grpc::ServerContext* context, const sushi_rpc::PropertyIdRequest* request, sushi_rpc::PropertyIdentifier* response) override;
-    grpc::Status GetPropertyInfo(grpc::ServerContext* context, const sushi_rpc::PropertyIdentifier* request, sushi_rpc::PropertyInfo* response) override;
-    grpc::Status GetPropertyValue(grpc::ServerContext* context, const sushi_rpc::PropertyIdentifier* request, sushi_rpc::GenericStringValue* response) override;
-    grpc::Status SetPropertyValue(grpc::ServerContext* context, const sushi_rpc::PropertyValue* request, sushi_rpc::GenericVoidValue* response) override;
-
-private:
-    sushi::control::ParameterController* _controller;
 };
 
 class ProgramControlService : public ProgramController::Service
@@ -169,14 +146,39 @@ class ProgramControlService : public ProgramController::Service
 public:
     ProgramControlService(sushi::control::SushiControl* controller) : _controller{controller->program_controller()} {}
 
-    grpc::Status GetProcessorCurrentProgram(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::ProgramIdentifier* response) override;
-    grpc::Status GetProcessorCurrentProgramName(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::GenericStringValue* response) override;
-    grpc::Status GetProcessorProgramName(grpc::ServerContext* context, const sushi_rpc::ProcessorProgramIdentifier* request, sushi_rpc::GenericStringValue* response) override;
-    grpc::Status GetProcessorPrograms(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::ProgramInfoList* response) override;
-    grpc::Status SetProcessorProgram(grpc::ServerContext* context, const sushi_rpc::ProcessorProgramSetRequest* request, sushi_rpc::GenericVoidValue* response) override;
+    grpc::Status GetProcessorCurrentProgram(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::ProgramIdentifierResponse* response) override;
+    grpc::Status GetProcessorCurrentProgramName(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::StringResponse* response) override;
+    grpc::Status GetProcessorProgramName(grpc::ServerContext* context, const sushi_rpc::ProcessorProgramIdentifier* request, sushi_rpc::StringResponse* response) override;
+    grpc::Status GetProcessorPrograms(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::ProgramInfoListResponse* response) override;
+    grpc::Status SetProcessorProgram(grpc::ServerContext* context, const sushi_rpc::ProcessorProgramSetRequest* request, sushi_rpc::CommandResponse* response) override;
 
 private:
     sushi::control::ProgramController* _controller;
+};
+
+class ParameterControlService : public ParameterController::Service
+{
+public:
+    ParameterControlService(sushi::control::SushiControl* controller) : _controller{controller->parameter_controller()} {}
+
+    grpc::Status GetTrackParameters(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::ParameterInfoListResponse* response) override;
+    grpc::Status GetProcessorParameters(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::ParameterInfoListResponse* response) override;
+    grpc::Status GetParameterId(grpc::ServerContext* context, const sushi_rpc::ParameterIdRequest* request, sushi_rpc::ParameterIdentifierResponse* response) override;
+    grpc::Status GetParameterInfo(grpc::ServerContext* context, const sushi_rpc::ParameterIdentifier* request, sushi_rpc::ParameterInfoResponse* response) override;
+    grpc::Status GetParameterValue(grpc::ServerContext* context, const sushi_rpc::ParameterIdentifier* request, sushi_rpc::FloatResponse* response) override;
+    grpc::Status GetParameterValueInDomain(grpc::ServerContext* context, const sushi_rpc::ParameterIdentifier* request, sushi_rpc::FloatResponse* response) override;
+    grpc::Status GetParameterValueAsString(grpc::ServerContext* context, const sushi_rpc::ParameterIdentifier* request, sushi_rpc::StringResponse* response) override;
+    grpc::Status SetParameterValue(grpc::ServerContext* context, const sushi_rpc::ParameterValue* request, sushi_rpc::CommandResponse* response) override;
+
+    grpc::Status GetTrackProperties(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::PropertyInfoListResponse* response) override;
+    grpc::Status GetProcessorProperties(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::PropertyInfoListResponse* response) override;
+    grpc::Status GetPropertyId(grpc::ServerContext* context, const sushi_rpc::PropertyIdRequest* request, sushi_rpc::PropertyIdentifierResponse* response) override;
+    grpc::Status GetPropertyInfo(grpc::ServerContext* context, const sushi_rpc::PropertyIdentifier* request, sushi_rpc::PropertyInfoResponse* response) override;
+    grpc::Status GetPropertyValue(grpc::ServerContext* context, const sushi_rpc::PropertyIdentifier* request, sushi_rpc::StringResponse* response) override;
+    grpc::Status SetPropertyValue(grpc::ServerContext* context, const sushi_rpc::PropertyValue* request, sushi_rpc::CommandResponse* response) override;
+
+private:
+    sushi::control::ParameterController* _controller;
 };
 
 class MidiControlService : public MidiController::Service
@@ -190,20 +192,20 @@ public:
     grpc::Status GetAllKbdOutputConnections(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::MidiKbdConnectionList* response) override;
     grpc::Status GetAllCCInputConnections(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::MidiCCConnectionList* response) override;
     grpc::Status GetAllPCInputConnections(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::MidiPCConnectionList* response) override;
-    grpc::Status GetCCInputConnectionsForProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::MidiCCConnectionList* response) override;
-    grpc::Status GetPCInputConnectionsForProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::MidiPCConnectionList* response) override;
+    grpc::Status GetCCInputConnectionsForProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::MidiCCConnectionListResponse* response) override;
+    grpc::Status GetPCInputConnectionsForProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::MidiPCConnectionListResponse* response) override;
     grpc::Status GetMidiClockOutputEnabled(grpc::ServerContext* context, const sushi_rpc::GenericIntValue* request, sushi_rpc::GenericBoolValue* response) override;
-    grpc::Status SetMidiClockOutputEnabled(grpc::ServerContext* context, const sushi_rpc::MidiClockSetRequest* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status ConnectKbdInputToTrack(grpc::ServerContext* context, const sushi_rpc::MidiKbdConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status ConnectKbdOutputFromTrack(grpc::ServerContext* context, const sushi_rpc::MidiKbdConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status ConnectCCToParameter(grpc::ServerContext* context, const sushi_rpc::MidiCCConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status ConnectPCToProcessor(grpc::ServerContext* context, const sushi_rpc::MidiPCConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectKbdInput(grpc::ServerContext* context, const sushi_rpc::MidiKbdConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectKbdOutput(grpc::ServerContext* context, const sushi_rpc::MidiKbdConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectCC(grpc::ServerContext* context, const sushi_rpc::MidiCCConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectPC(grpc::ServerContext* context, const sushi_rpc::MidiPCConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectAllCCFromProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectAllPCFromProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
+    grpc::Status SetMidiClockOutputEnabled(grpc::ServerContext* context, const sushi_rpc::MidiClockSetRequest* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status ConnectKbdInputToTrack(grpc::ServerContext* context, const sushi_rpc::MidiKbdConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status ConnectKbdOutputFromTrack(grpc::ServerContext* context, const sushi_rpc::MidiKbdConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status ConnectCCToParameter(grpc::ServerContext* context, const sushi_rpc::MidiCCConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status ConnectPCToProcessor(grpc::ServerContext* context, const sushi_rpc::MidiPCConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectKbdInput(grpc::ServerContext* context, const sushi_rpc::MidiKbdConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectKbdOutput(grpc::ServerContext* context, const sushi_rpc::MidiKbdConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectCC(grpc::ServerContext* context, const sushi_rpc::MidiCCConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectPC(grpc::ServerContext* context, const sushi_rpc::MidiPCConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectAllCCFromProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectAllPCFromProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::CommandResponse* response) override;
 
 private:
     sushi::control::MidiController* _midi_controller;
@@ -216,15 +218,15 @@ public:
 
     grpc::Status GetAllInputConnections(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::AudioConnectionList* response) override;
     grpc::Status GetAllOutputConnections(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::AudioConnectionList* response) override;
-    grpc::Status GetInputConnectionsForTrack(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::AudioConnectionList* response) override;
-    grpc::Status GetOutputConnectionsForTrack(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::AudioConnectionList* response) override;
-    grpc::Status ConnectInputChannelToTrack(grpc::ServerContext* context, const sushi_rpc::AudioConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status ConnectOutputChannelFromTrack(grpc::ServerContext* context, const sushi_rpc::AudioConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectInput(grpc::ServerContext* context, const sushi_rpc::AudioConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectOutput(grpc::ServerContext* context, const sushi_rpc::AudioConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectAllInputsFromTrack(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectAllOutputFromTrack(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectAllOutputsFromTrack(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
+    grpc::Status GetInputConnectionsForTrack(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::AudioConnectionListResponse* response) override;
+    grpc::Status GetOutputConnectionsForTrack(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::AudioConnectionListResponse* response) override;
+    grpc::Status ConnectInputChannelToTrack(grpc::ServerContext* context, const sushi_rpc::AudioConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status ConnectOutputChannelFromTrack(grpc::ServerContext* context, const sushi_rpc::AudioConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectInput(grpc::ServerContext* context, const sushi_rpc::AudioConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectOutput(grpc::ServerContext* context, const sushi_rpc::AudioConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectAllInputsFromTrack(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::CommandResponse* response) override;
+// TODO - DEPRECATE    grpc::Status DisconnectAllOutputFromTrack(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectAllOutputsFromTrack(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::CommandResponse* response) override;
 
 private:
     sushi::control::AudioRoutingController* _controller;
@@ -241,22 +243,22 @@ public:
     grpc::Status GetAllCvOutputConnections(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::CvConnectionList* response) override;
     grpc::Status GetAllGateInputConnections(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::GateConnectionList* response) override;
     grpc::Status GetAllGateOutputConnections(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::GateConnectionList* response) override;
-    grpc::Status GetCvInputConnectionsForProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::CvConnectionList* response) override;
-    grpc::Status GetCvOutputConnectionsForProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::CvConnectionList* response) override;
-    grpc::Status GetGateInputConnectionsForProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::GateConnectionList* response) override;
-    grpc::Status GetGateOutputConnectionsForProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::GateConnectionList* response) override;
-    grpc::Status ConnectCvInputToParameter(grpc::ServerContext* context, const sushi_rpc::CvConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status ConnectCvOutputFromParameter(grpc::ServerContext* context, const sushi_rpc::CvConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status ConnectGateInputToProcessor(grpc::ServerContext* context, const sushi_rpc::GateConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status ConnectGateOutputFromProcessor(grpc::ServerContext* context, const sushi_rpc::GateConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectCvInput(grpc::ServerContext* context, const sushi_rpc::CvConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectCvOutput(grpc::ServerContext* context, const sushi_rpc::CvConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectGateInput(grpc::ServerContext* context, const sushi_rpc::GateConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectGateOutput(grpc::ServerContext* context, const sushi_rpc::GateConnection* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectAllCvInputsFromProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectAllCvOutputsFromProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectAllGateInputsFromProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisconnectAllGateOutputsFromProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
+    grpc::Status GetCvInputConnectionsForProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::CvConnectionListResponse* response) override;
+    grpc::Status GetCvOutputConnectionsForProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::CvConnectionListResponse* response) override;
+    grpc::Status GetGateInputConnectionsForProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::GateConnectionListResponse* response) override;
+    grpc::Status GetGateOutputConnectionsForProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::GateConnectionListResponse* response) override;
+    grpc::Status ConnectCvInputToParameter(grpc::ServerContext* context, const sushi_rpc::CvConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status ConnectCvOutputFromParameter(grpc::ServerContext* context, const sushi_rpc::CvConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status ConnectGateInputToProcessor(grpc::ServerContext* context, const sushi_rpc::GateConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status ConnectGateOutputFromProcessor(grpc::ServerContext* context, const sushi_rpc::GateConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectCvInput(grpc::ServerContext* context, const sushi_rpc::CvConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectCvOutput(grpc::ServerContext* context, const sushi_rpc::CvConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectGateInput(grpc::ServerContext* context, const sushi_rpc::GateConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectGateOutput(grpc::ServerContext* context, const sushi_rpc::GateConnection* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectAllCvInputsFromProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectAllCvOutputsFromProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectAllGateInputsFromProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisconnectAllGateOutputsFromProcessor(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::CommandResponse* response) override;
 
 private:
     sushi::control::CvGateController* _controller;
@@ -271,10 +273,10 @@ public:
     grpc::Status GetSendPort(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::GenericIntValue* response) override;
     grpc::Status GetReceivePort(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::GenericIntValue* response) override;
     grpc::Status GetEnabledParameterOutputs(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::OscParameterOutputList* response) override;
-    grpc::Status EnableOutputForParameter(grpc::ServerContext* context, const sushi_rpc::ParameterIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisableOutputForParameter(grpc::ServerContext* context, const sushi_rpc::ParameterIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status EnableAllOutput(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::GenericVoidValue* response) override;
-    grpc::Status DisableAllOutput(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::GenericVoidValue* response) override;
+    grpc::Status EnableOutputForParameter(grpc::ServerContext* context, const sushi_rpc::ParameterIdentifier* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisableOutputForParameter(grpc::ServerContext* context, const sushi_rpc::ParameterIdentifier* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status EnableAllOutput(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::CommandResponse* response) override;
+    grpc::Status DisableAllOutput(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::CommandResponse* response) override;
 
 private:
     sushi::control::OscController* _controller;
@@ -286,7 +288,7 @@ public:
     SessionControlService(sushi::control::SushiControl* controller) : _controller{controller->session_controller()} {}
 
     grpc::Status SaveSession(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::SessionState* response) override;
-    grpc::Status RestoreSession(grpc::ServerContext* context, const sushi_rpc::SessionState* request, sushi_rpc::GenericVoidValue* response) override;
+    grpc::Status RestoreSession(grpc::ServerContext* context, const sushi_rpc::SessionState* request, sushi_rpc::CommandResponse* response) override;
 
 private:
     sushi::control::SessionController* _controller;
@@ -298,8 +300,9 @@ using AsyncService = sushi_rpc::NotificationController::WithAsyncMethod_Subscrib
                      sushi_rpc::NotificationController::WithAsyncMethod_SubscribeToEngineCpuTimingUpdates<
                      sushi_rpc::NotificationController::WithAsyncMethod_SubscribeToTransportChanges<
                      sushi_rpc::NotificationController::WithAsyncMethod_SubscribeToPropertyUpdates<
+                     sushi_rpc::NotificationController::WithAsyncMethod_SubscribeToAsyncCommandUpdates<
                      sushi_rpc::NotificationController::Service
-                     >>>>>>;
+                     >>>>>>>;
 
 class NotificationControlService : public AsyncService,
                                    private sushi::control::ControlListener
@@ -328,6 +331,9 @@ public:
     void subscribe(SubscribeToPropertyUpdatesCallData* subscriber);
     void unsubscribe(SubscribeToPropertyUpdatesCallData* subscriber);
 
+    void subscribe(SubscribeToAsyncCommandUpdatesCallData* subscriber);
+    void unsubscribe(SubscribeToAsyncCommandUpdatesCallData* subscriber);
+
     void delete_all_subscribers();
 
 private:
@@ -337,6 +343,7 @@ private:
     void _forward_processor_notification_to_subscribers(const sushi::control::ControlNotification* notification);
     void _forward_parameter_notification_to_subscribers(const sushi::control::ControlNotification* notification);
     void _forward_property_notification_to_subscribers(const sushi::control::ControlNotification* notification);
+    void _forward_async_command_notification_to_subscribers(const sushi::control::ControlNotification* notification);
 
     std::vector<SubscribeToTransportChangesCallData*> _transport_subscribers;
     std::mutex _transport_subscriber_lock;
@@ -355,6 +362,9 @@ private:
 
     std::vector<SubscribeToPropertyUpdatesCallData*> _property_subscribers;
     std::mutex _property_subscriber_lock;
+
+    std::vector<SubscribeToAsyncCommandUpdatesCallData*> _command_subscribers;
+    std::mutex _command_subscriber_lock;
 
     sushi::control::SushiControl* _controller;
 

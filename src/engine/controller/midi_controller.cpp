@@ -55,8 +55,10 @@ control::MidiPCConnection populate_pc_connection(const midi_dispatcher::PCInputC
 
 
 MidiController::MidiController(BaseEngine* engine,
-                               midi_dispatcher::MidiDispatcher* midi_dispatcher) : _event_dispatcher(engine->event_dispatcher()),
-                                                                                   _midi_dispatcher(midi_dispatcher) {}
+                               midi_dispatcher::MidiDispatcher* midi_dispatcher,
+                               CompletionSender* sender) : _event_dispatcher(engine->event_dispatcher()),
+                                                           _midi_dispatcher(midi_dispatcher),
+                                                           _sender(sender) {}
 
 int MidiController::get_input_ports() const
 {
@@ -183,10 +185,10 @@ MidiController::get_pc_input_connections_for_processor(int processor_id) const
     return returns;
 }
 
-control::ControlStatus MidiController::connect_kbd_input_to_track(int track_id,
-                                                                  control::MidiChannel channel,
-                                                                  int port,
-                                                                  bool raw_midi)
+control::ControlResponse MidiController::connect_kbd_input_to_track(int track_id,
+                                                                    control::MidiChannel channel,
+                                                                    int port,
+                                                                    bool raw_midi)
 {
     const int int_channel = int_from_ext_midi_channel(channel);
 
@@ -213,13 +215,12 @@ control::ControlStatus MidiController::connect_kbd_input_to_track(int track_id,
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus MidiController::connect_kbd_output_from_track(int track_id,
-                                                                     control::MidiChannel channel,
-                                                                     int port)
+control::ControlResponse MidiController::connect_kbd_output_from_track(int track_id,
+                                                                       control::MidiChannel channel,
+                                                                       int port)
 {
     const int int_channel = int_from_ext_midi_channel(channel);
 
@@ -239,18 +240,17 @@ control::ControlStatus MidiController::connect_kbd_output_from_track(int track_i
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus MidiController::connect_cc_to_parameter(int processor_id,
-                                                               int parameter_id,
-                                                               control::MidiChannel channel,
-                                                               int port,
-                                                               int cc_number,
-                                                               float min_range,
-                                                               float max_range,
-                                                               bool relative_mode)
+control::ControlResponse MidiController::connect_cc_to_parameter(int processor_id,
+                                                                 int parameter_id,
+                                                                 control::MidiChannel channel,
+                                                                 int port,
+                                                                 int cc_number,
+                                                                 float min_range,
+                                                                 float max_range,
+                                                                 bool relative_mode)
 {
     const int int_channel = int_from_ext_midi_channel(channel);
 
@@ -276,11 +276,10 @@ control::ControlStatus MidiController::connect_cc_to_parameter(int processor_id,
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus MidiController::connect_pc_to_processor(int processor_id,
+control::ControlResponse MidiController::connect_pc_to_processor(int processor_id,
                                                                control::MidiChannel channel, int port)
 {
     const int int_channel = int_from_ext_midi_channel(channel);
@@ -304,11 +303,10 @@ control::ControlStatus MidiController::connect_pc_to_processor(int processor_id,
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus MidiController::disconnect_kbd_input(int track_id,
+control::ControlResponse MidiController::disconnect_kbd_input(int track_id,
                                                             control::MidiChannel channel, int port, bool raw_midi)
 {
     const int int_channel = int_from_ext_midi_channel(channel);
@@ -340,12 +338,10 @@ control::ControlStatus MidiController::disconnect_kbd_input(int track_id,
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus MidiController::disconnect_kbd_output(int track_id, control::MidiChannel channel, int port)
+control::ControlResponse MidiController::disconnect_kbd_output(int track_id, control::MidiChannel channel, int port)
 {
     const int int_channel = int_from_ext_midi_channel(channel);
 
@@ -365,12 +361,10 @@ control::ControlStatus MidiController::disconnect_kbd_output(int track_id, contr
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus MidiController::disconnect_cc(int processor_id,
+control::ControlResponse MidiController::disconnect_cc(int processor_id,
                                                      control::MidiChannel channel, int port, int cc_number)
 {
     const int int_channel = int_from_ext_midi_channel(channel);
@@ -393,12 +387,10 @@ control::ControlStatus MidiController::disconnect_cc(int processor_id,
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus MidiController::disconnect_pc(int processor_id, control::MidiChannel channel, int port)
+control::ControlResponse MidiController::disconnect_pc(int processor_id, control::MidiChannel channel, int port)
 {
     const int int_channel = int_from_ext_midi_channel(channel);
 
@@ -421,12 +413,10 @@ control::ControlStatus MidiController::disconnect_pc(int processor_id, control::
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus MidiController::disconnect_all_cc_from_processor(int processor_id)
+control::ControlResponse MidiController::disconnect_all_cc_from_processor(int processor_id)
 {
     auto lambda = [=, this] () -> int
     {
@@ -443,12 +433,10 @@ control::ControlStatus MidiController::disconnect_all_cc_from_processor(int proc
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus MidiController::disconnect_all_pc_from_processor(int processor_id)
+control::ControlResponse MidiController::disconnect_all_pc_from_processor(int processor_id)
 {
     auto lambda = [=, this] () -> int
     {
@@ -465,9 +453,7 @@ control::ControlStatus MidiController::disconnect_all_pc_from_processor(int proc
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
 } // end namespace sushi::internal::engine::controller_impl

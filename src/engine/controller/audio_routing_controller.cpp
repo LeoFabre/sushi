@@ -29,8 +29,8 @@ namespace sushi::internal::engine::controller_impl {
 inline control::AudioConnection to_external(const AudioConnection& con)
 {
     return control::AudioConnection{.track_id = static_cast<int>(con.track),
-                                .track_channel = con.track_channel,
-                                .engine_channel = con.engine_channel};
+                                    .track_channel = con.track_channel,
+                                    .engine_channel = con.engine_channel};
 }
 
 
@@ -60,37 +60,53 @@ std::vector<control::AudioConnection> AudioRoutingController::get_all_output_con
     return returns;
 }
 
-std::vector<control::AudioConnection> AudioRoutingController::get_input_connections_for_track(int track_id) const
+std::pair<control::ControlStatus, std::vector<control::AudioConnection>> AudioRoutingController::get_input_connections_for_track(int track_id) const
 {
     ELKLOG_LOG_DEBUG("get_input_connections_for_track called with track id {}", track_id);
+    std::pair<control::ControlStatus, std::vector<control::AudioConnection>> returns;
+    returns.first = control::ControlStatus::OK;
+
+    if (!_engine->processor_container()->processor_exists(track_id))
+    {
+        returns.first = control::ControlStatus::NOT_FOUND;
+        return returns;
+    }
+
     auto connections = _engine->audio_input_connections();
-    std::vector<control::AudioConnection> returns;
     for (const auto& connection : connections)
     {
         if (connection.track == static_cast<ObjectId>(track_id))
         {
-            returns.push_back(to_external(connection));
+            returns.second.push_back(to_external(connection));
         }
     }
     return returns;
 }
 
-std::vector<control::AudioConnection> AudioRoutingController::get_output_connections_for_track(int track_id) const
+std::pair<control::ControlStatus, std::vector<control::AudioConnection>> AudioRoutingController::get_output_connections_for_track(int track_id) const
 {
     ELKLOG_LOG_DEBUG("get_output_connections_for_track called with track id {}", track_id);
+    std::pair<control::ControlStatus, std::vector<control::AudioConnection>> returns;
+    returns.first = control::ControlStatus::OK;
+
+    if (!_engine->processor_container()->processor_exists(track_id))
+    {
+        returns.first = control::ControlStatus::NOT_FOUND;
+        return returns;
+    }
+
     auto connections = _engine->audio_output_connections();
-    std::vector<control::AudioConnection> returns;
     for (const auto& connection : connections)
     {
         if (connection.track == static_cast<ObjectId>(track_id))
         {
-            returns.push_back(to_external(connection));
+            returns.second.push_back(to_external(connection));
         }
     }
     return returns;
 }
 
-control::ControlStatus AudioRoutingController::connect_input_channel_to_track(int track_id, int track_channel, int input_channel)
+control::ControlResponse AudioRoutingController::connect_input_channel_to_track(int track_id, int track_channel, int input_channel)
 {
     ELKLOG_LOG_DEBUG("disconnect_output called with track id {}, track_channel {}, input_channel {}", track_id, track_channel, input_channel);
     auto lambda = [=, this] () -> int
@@ -103,11 +119,10 @@ control::ControlStatus AudioRoutingController::connect_input_channel_to_track(in
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioRoutingController::connect_output_channel_to_track(int track_id, int track_channel, int output_channel)
+control::ControlResponse AudioRoutingController::connect_output_channel_to_track(int track_id, int track_channel, int output_channel)
 {
     ELKLOG_LOG_DEBUG("connect_output called with track id {}, track_channel {}, output_channel {}", track_id, track_channel, output_channel);
     auto lambda = [=, this] () -> int
@@ -120,11 +135,10 @@ control::ControlStatus AudioRoutingController::connect_output_channel_to_track(i
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioRoutingController::disconnect_input(int track_id, int track_channel, int input_channel)
+control::ControlResponse AudioRoutingController::disconnect_input(int track_id, int track_channel, int input_channel)
 {
     ELKLOG_LOG_DEBUG("disconnect_input called with track id {}, track_channel {}, input_channel {}", track_id, track_channel, input_channel);
     auto lambda = [=, this] () -> int
@@ -137,11 +151,10 @@ control::ControlStatus AudioRoutingController::disconnect_input(int track_id, in
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioRoutingController::disconnect_output(int track_id, int track_channel, int output_channel)
+control::ControlResponse AudioRoutingController::disconnect_output(int track_id, int track_channel, int output_channel)
 {
     ELKLOG_LOG_DEBUG("disconnect_output called with track id {}, track_channel {}, output_channel {}", track_id, track_channel, output_channel);
     auto lambda = [=, this] () -> int
@@ -154,11 +167,10 @@ control::ControlStatus AudioRoutingController::disconnect_output(int track_id, i
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioRoutingController::disconnect_all_inputs_from_track(int track_id)
+control::ControlResponse AudioRoutingController::disconnect_all_inputs_from_track(int track_id)
 {
     ELKLOG_LOG_DEBUG("disconnect_all_inputs_from_track called with track {}", track_id);
     auto lambda = [=, this] () -> int
@@ -182,11 +194,10 @@ control::ControlStatus AudioRoutingController::disconnect_all_inputs_from_track(
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioRoutingController::disconnect_all_outputs_from_track(int track_id)
+control::ControlResponse AudioRoutingController::disconnect_all_outputs_from_track(int track_id)
 {
     ELKLOG_LOG_DEBUG("disconnect_all_outputs_from_track called with track {}", track_id);
     auto lambda = [=, this] () -> int
@@ -209,8 +220,7 @@ control::ControlStatus AudioRoutingController::disconnect_all_outputs_from_track
     };
     
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
 } // end namespace sushi::engine::controller_impl

@@ -23,6 +23,7 @@
 
 #include "sushi/control_interface.h"
 
+#include "completion_sender.h"
 #include "engine/base_engine.h"
 #include "engine/base_event_dispatcher.h"
 #include "engine/base_processor_container.h"
@@ -32,7 +33,7 @@ namespace sushi::internal::engine::controller_impl {
 class ProgramController : public control::ProgramController
 {
 public:
-    explicit ProgramController(BaseEngine* engine);
+    explicit ProgramController(BaseEngine* engine, CompletionSender* sender);
 
     ~ProgramController() override = default;
 
@@ -44,11 +45,11 @@ public:
 
     std::pair<control::ControlStatus, std::vector<std::string>> get_processor_programs(int processor_id) const override;
 
-    control::ControlStatus set_processor_program(int processor_id, int program_id) override;
+    control::ControlResponse set_processor_program(int processor_id, int program_id) override;
 
 private:
-    dispatcher::BaseEventDispatcher*    _event_dispatcher;
     const BaseProcessorContainer*       _processors;
+    CompletionSender*                   _sender;
 };
 
 } // end namespace sushi::internal::engine::controller_impl

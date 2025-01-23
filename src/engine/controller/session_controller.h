@@ -23,6 +23,7 @@
 
 #include "sushi/control_interface.h"
 
+#include "completion_sender.h"
 #include "engine/base_engine.h"
 #include "engine/base_event_dispatcher.h"
 #include "engine/midi_dispatcher.h"
@@ -38,7 +39,8 @@ class SessionController : public control::SessionController
 public:
     SessionController(BaseEngine* engine,
                       midi_dispatcher::MidiDispatcher* midi_dispatcher,
-                      audio_frontend::BaseAudioFrontend* audio_frontend);
+                      audio_frontend::BaseAudioFrontend* audio_frontend,
+                      CompletionSender* sender);
 
     ~SessionController() override = default;
 
@@ -46,7 +48,7 @@ public:
 
     [[nodiscard]] control::SessionState save_session() const override;
 
-    control::ControlStatus restore_session(const control::SessionState& state) override;
+    control::ControlResponse restore_session(const control::SessionState& state) override;
 
 private:
     friend Accessor;
@@ -68,7 +70,7 @@ private:
     void _restore_osc(control::OscState& state);
     void _clear_all_tracks();
 
-    dispatcher::BaseEventDispatcher*    _event_dispatcher;
+    CompletionSender*                   _sender;
     engine::BaseEngine*                 _engine;
     midi_dispatcher::MidiDispatcher*    _midi_dispatcher;
     audio_frontend::BaseAudioFrontend*  _audio_frontend;

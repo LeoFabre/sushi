@@ -25,6 +25,12 @@
 
 #include "library/base_performance_timer.h"
 
+struct CompletionData
+{
+    sushi::internal::EventCompletionCallback callback;
+    void* data;
+};
+
 namespace sushi::internal::engine::controller_impl {
 
 /* Convenience conversion functions between external and internal

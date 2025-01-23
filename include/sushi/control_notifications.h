@@ -126,6 +126,20 @@ private:
     std::string _value;
 };
 
+class CommandCompletionNotification : public ControlNotification
+{
+public:
+    CommandCompletionNotification(ControlStatus status, int id, Time timestamp)
+    : ControlNotification(NotificationType::ASYNC_COMMAND_COMPLETION, timestamp), _status(status), _id(id) {}
+
+    ControlStatus status() const {return _status;}
+    int id() const {return _id;}
+
+private:
+    ControlStatus _status;
+    int           _id;
+};
+
 } // end namespace sushi::control
 
 #endif //SUSHI_CONTROL_NOTIFICATIONS_H

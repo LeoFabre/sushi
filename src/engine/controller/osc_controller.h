@@ -23,6 +23,7 @@
 
 #include "sushi/control_interface.h"
 
+#include "completion_sender.h"
 #include "control_frontends/osc_frontend.h"
 #include "engine/base_engine.h"
 #include "engine/base_processor_container.h"
@@ -32,7 +33,7 @@ namespace sushi::internal::engine::controller_impl {
 class OscController : public control::OscController
 {
 public:
-    explicit OscController(BaseEngine* engine);
+    explicit OscController(BaseEngine* engine, CompletionSender* sender);
 
     void set_osc_frontend(control_frontend::OSCFrontend* osc_frontend);
 
@@ -46,18 +47,19 @@ public:
 
     std::vector<std::string> get_enabled_parameter_outputs() const override;
 
-    control::ControlStatus enable_output_for_parameter(int processor_id, int parameter_id) override;
+    control::ControlResponse enable_output_for_parameter(int processor_id, int parameter_id) override;
 
-    control::ControlStatus disable_output_for_parameter(int processor_id, int parameter_id) override;
+    control::ControlResponse disable_output_for_parameter(int processor_id, int parameter_id) override;
 
-    control::ControlStatus enable_all_output() override;
+    control::ControlResponse enable_all_output() override;
 
-    control::ControlStatus disable_all_output() override;
+    control::ControlResponse disable_all_output() override;
 
 private:
     dispatcher::BaseEventDispatcher* _event_dispatcher;
     control_frontend::OSCFrontend* _osc_frontend {nullptr};
     const engine::BaseProcessorContainer* _processors;
+    CompletionSender* _sender;
 };
 
 } // end namespace sushi::internal::engine::controller_impl

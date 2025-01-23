@@ -75,7 +75,7 @@ protected:
         _osc_frontend = std::make_unique<OSCFrontend>(_audio_engine.get(), &_mock_controller, _mock_osc_interface);
         _event_dispatcher_mockup = static_cast<EventDispatcherMockup*>(_audio_engine->event_dispatcher());
         _midi_dispatcher = std::make_unique<MidiDispatcher>(_event_dispatcher_mockup);
-        _module_under_test = std::make_unique<SessionController>(_audio_engine.get(), _midi_dispatcher.get(), &_audio_frontend);
+        _module_under_test = std::make_unique<SessionController>(_audio_engine.get(), _midi_dispatcher.get(), &_audio_frontend, _event_dispatcher_mockup);
         _module_under_test->set_osc_frontend(_osc_frontend.get());
 
         _accessor = std::make_unique<sushi::internal::engine::controller_impl::Accessor>(*_module_under_test);
@@ -317,14 +317,14 @@ TEST_F(SessionControllerTest, TestSaveAndRestore)
 
     ASSERT_TRUE(_audio_engine->processor_container()->all_tracks().empty());
 
-    auto controller_status = _module_under_test->restore_session(session_state);
+    auto controller_response = _module_under_test->restore_session(session_state);
     // As the restore is done asynchronously, we need to execute the event manually
 
     _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
 
     // Check that tracks and processors were restored correctly
     auto processors = _audio_engine->processor_container();
-    ASSERT_EQ(control::ControlStatus::OK, controller_status);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, controller_response.status);
     ASSERT_EQ(1, processors->all_tracks().size());
     auto restored_track = processors->all_tracks().front();
 

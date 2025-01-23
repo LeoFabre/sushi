@@ -249,5 +249,25 @@ private:
     std::unordered_map<BlocklistKey, bool> _blocklist;
 };
 
+class SubscribeToAsyncCommandUpdatesCallData : public SubscribeToUpdatesCallData<AsyncCommandResponse, GenericVoidValue>
+{
+public:
+    SubscribeToAsyncCommandUpdatesCallData(NotificationControlService* service,
+                                           grpc::ServerCompletionQueue* async_rpc_queue)
+        : SubscribeToUpdatesCallData(service, async_rpc_queue)
+    {
+        proceed();
+    }
+
+    ~SubscribeToAsyncCommandUpdatesCallData() = default;
+
+protected:
+    void _respawn() override;
+    void _subscribe() override;
+    void _unsubscribe() override;
+    bool _check_if_blocklisted(const AsyncCommandResponse& reply) override;
+    void _populate_blocklist() override {}
+};
+
 }
 #endif // SUSHI_ASYNCSERVICECALLDATA_H

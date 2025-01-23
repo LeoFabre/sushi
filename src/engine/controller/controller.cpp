@@ -31,37 +31,52 @@ ELKLOG_GET_LOGGER_WITH_MODULE_NAME("controller");
 
 namespace sushi::internal::engine {
 
+control::ControlStatus to_external_status(int status)
+{
+    switch (status)
+    {
+        case EventStatus::HANDLED_OK:                   return sushi::control::ControlStatus::OK;
+        case EventStatus::ERROR:                        return sushi::control::ControlStatus::ERROR;
+        case ControlEventStatus::UNSUPPORTED_OPERATION: return sushi::control::ControlStatus::UNSUPPORTED_OPERATION;
+        case ControlEventStatus::NOT_FOUND:             return sushi::control::ControlStatus::NOT_FOUND;
+        case ControlEventStatus::OUT_OF_RANGE:          return sushi::control::ControlStatus::OUT_OF_RANGE;
+        case ControlEventStatus::INVALID_ARGUMENTS:     return sushi::control::ControlStatus::INVALID_ARGUMENTS;
+        default:                                        return sushi::control::ControlStatus::ERROR;
+    }
+}
+
 using namespace controller_impl;
 
 Controller::Controller(engine::BaseEngine* engine,
                        midi_dispatcher::MidiDispatcher* midi_dispatcher,
                        audio_frontend::BaseAudioFrontend* audio_frontend) : control::SushiControl(&_system_controller_impl,
-                                                                                              &_transport_controller_impl,
-                                                                                              &_timing_controller_impl,
-                                                                                              &_keyboard_controller_impl,
-                                                                                              &_audio_graph_controller_impl,
-                                                                                              &_program_controller_impl,
-                                                                                              &_parameter_controller_impl,
-                                                                                              &_midi_controller_impl,
-                                                                                              &_audio_routing_controller_impl,
-                                                                                              &_cv_gate_controller_impl,
-                                                                                              &_osc_controller_impl,
-                                                                                              &_session_controller_impl),
-                                                                         _system_controller_impl(engine->audio_input_channels(),
-                                                                                                 engine->audio_output_channels()),
-                                                                         _transport_controller_impl(engine),
-                                                                         _timing_controller_impl(engine),
-                                                                         _keyboard_controller_impl(engine),
-                                                                         _audio_graph_controller_impl(engine),
-                                                                         _program_controller_impl(engine),
-                                                                         _parameter_controller_impl(engine),
-                                                                         _midi_controller_impl(engine, midi_dispatcher),
-                                                                         _audio_routing_controller_impl(engine),
-                                                                         _cv_gate_controller_impl(engine),
-                                                                         _osc_controller_impl(engine),
-                                                                         _session_controller_impl(engine,
-                                                                                                  midi_dispatcher,
-                                                                                                  audio_frontend)
+                                                                                                  &_transport_controller_impl,
+                                                                                                  &_timing_controller_impl,
+                                                                                                  &_keyboard_controller_impl,
+                                                                                                  &_audio_graph_controller_impl,
+                                                                                                  &_program_controller_impl,
+                                                                                                  &_parameter_controller_impl,
+                                                                                                  &_midi_controller_impl,
+                                                                                                  &_audio_routing_controller_impl,
+                                                                                                  &_cv_gate_controller_impl,
+                                                                                                  &_osc_controller_impl,
+                                                                                                  &_session_controller_impl),
+                                                                             _system_controller_impl(engine->audio_input_channels(),
+                                                                                                     engine->audio_output_channels()),
+                                                                             _transport_controller_impl(engine),
+                                                                             _timing_controller_impl(engine),
+                                                                             _keyboard_controller_impl(engine),
+                                                                             _audio_graph_controller_impl(engine, this),
+                                                                             _program_controller_impl(engine, this),
+                                                                             _parameter_controller_impl(engine),
+                                                                             _midi_controller_impl(engine, midi_dispatcher, this),
+                                                                             _audio_routing_controller_impl(engine, this),
+                                                                             _cv_gate_controller_impl(engine, this),
+                                                                             _osc_controller_impl(engine, this),
+                                                                             _session_controller_impl(engine,
+                                                                                                      midi_dispatcher,
+                                                                                                      audio_frontend,
+                                                                                                      this)
 {
     _event_dispatcher = engine->event_dispatcher();
     _processors = engine->processor_container();
@@ -98,6 +113,10 @@ control::ControlStatus Controller::subscribe_to_notifications(control::Notificat
             break;
         case control::NotificationType::CPU_TIMING_UPDATE:
             _cpu_timing_update_listeners.push_back(listener);
+            break;
+        case control::NotificationType::ASYNC_COMMAND_COMPLETION:
+            _command_completion_listeners.push_back(listener);
+            break;
         default:
             break;
     }
@@ -275,6 +294,7 @@ void Controller::_completion_callback([[maybe_unused]] Event* event, int status)
     {
         ELKLOG_LOG_WARNING("Event {} returned with error code: ", event->id(), status);
     }
+    _notify_command_completion_listeners(event, to_external_status(status));
 }
 
 void Controller::set_osc_frontend(control_frontend::OSCFrontend* osc_frontend)
@@ -290,6 +310,21 @@ void Controller::_notify_timing_listeners(const EngineTimingNotificationEvent* e
     {
         listener->notification(&notification);
     }
+}
+void Controller::_notify_command_completion_listeners(const Event* event, control::ControlStatus status) const
+{
+    control::CommandCompletionNotification notification(status, event->id(), event->time());
+    for (auto& listener : _command_completion_listeners)
+    {
+        listener->notification(&notification);
+    }
+}
+int Controller::send_with_completion_notification(std::unique_ptr<Event> event)
+{
+    event->set_completion_cb(completion_callback, this);
+    int event_id = event->id();
+    _event_dispatcher->post_event(std::move(event));
+    return event_id;
 }
 
 } // end namespace sushi::internal::engine

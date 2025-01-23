@@ -27,12 +27,14 @@
 #include "engine/base_event_dispatcher.h"
 #include "controller_common.h"
 
+namespace sushi::internal::engine { class CompletionSender;}
+
 namespace sushi::internal::engine::controller_impl {
 
 class AudioGraphController : public control::AudioGraphController
 {
 public:
-    explicit AudioGraphController(BaseEngine* engine);
+    explicit AudioGraphController(BaseEngine* engine, CompletionSender* sender);
 
     ~AudioGraphController() override = default;
 
@@ -54,41 +56,44 @@ public:
 
     std::pair<control::ControlStatus, control::ProcessorState> get_processor_state(int processor_id) const override;
 
-    control::ControlStatus set_processor_bypass_state(int processor_id, bool bypass_enabled) override;
+    control::ControlResponse set_processor_bypass_state(int processor_id, bool bypass_enabled) override;
 
-    control::ControlStatus set_processor_state(int processor_id, const control::ProcessorState& state) override;
+    control::ControlResponse set_processor_state(int processor_id, const control::ProcessorState& state) override;
 
-    control::ControlStatus create_track(const std::string& name, int channels) override;
+    control::ControlResponse create_track(const std::string& name, int channels) override;
 
-    control::ControlStatus create_multibus_track(const std::string& name, int buses) override;
+    control::ControlResponse create_multibus_track(const std::string& name, int buses) override;
 
-    control::ControlStatus create_pre_track(const std::string& name) override;
+    control::ControlResponse create_pre_track(const std::string& name) override;
 
-    control::ControlStatus create_post_track(const std::string& name) override;
+    control::ControlResponse create_post_track(const std::string& name) override;
 
-    control::ControlStatus move_processor_on_track(int processor_id,
-                                                   int source_track_id,
-                                                   int dest_track_id,
-                                                   std::optional<int> before_processor) override;
+    control::ControlResponse move_processor_on_track(int processor_id,
+                                                     int source_track_id,
+                                                     int dest_track_id,
+                                                     std::optional<int> before_processor) override;
 
-    control::ControlStatus create_processor_on_track(const std::string& name,
-                                                     const std::string& uid,
-                                                     const std::string& file,
-                                                     control::PluginType type,
-                                                     int track_id,
-                                                     std::optional<int> before_processor_id) override;
+    control::ControlResponse create_processor_on_track(const std::string& name,
+                                                       const std::string& uid,
+                                                       const std::string& file,
+                                                       control::PluginType type,
+                                                       int track_id,
+                                                       std::optional<int> before_processor_id) override;
 
-    control::ControlStatus delete_processor_from_track(int processor_id, int track_id) override;
+    control::ControlResponse delete_processor_from_track(int processor_id, int track_id) override;
 
-    control::ControlStatus delete_track(int track_id) override;
+    control::ControlResponse delete_track(int track_id) override;
 
 
 private:
     std::vector<int> _get_processor_ids(int track_id) const;
 
+    int _send_with_completion_callback(std::unique_ptr<Event> event);
+
     engine::BaseEngine*                     _engine;
     dispatcher::BaseEventDispatcher*        _event_dispatcher;
     const engine::BaseProcessorContainer*   _processors;
+    CompletionSender*                       _sender;
 };
 
 } // end namespace sushi::internal::engine::controller_impl

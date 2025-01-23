@@ -58,11 +58,12 @@ control::SyncMode TransportController::get_sync_mode() const
     return to_external(_transport->sync_mode());
 }
 
-void TransportController::set_sync_mode(control::SyncMode sync_mode)
+control::ControlStatus TransportController::set_sync_mode(control::SyncMode sync_mode)
 {
     ELKLOG_LOG_DEBUG("set_sync_mode called");
     _event_dispatcher->post_event(std::make_unique<SetEngineSyncModeEvent>(to_internal(sync_mode),
                                                                            IMMEDIATE_PROCESS));
+    return control::ControlStatus::OK;
 }
 
 float TransportController::get_tempo() const

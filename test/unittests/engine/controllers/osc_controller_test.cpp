@@ -41,17 +41,18 @@ protected:
         _osc_frontend = std::make_unique<OSCFrontend>(&_test_engine, &_controller, mock_osc_interface);
 
         _test_dispatcher = static_cast<EventDispatcherMockup*>(_test_engine.event_dispatcher());
+        _osc_controller = std::make_unique<OscController>(&_test_engine, _test_dispatcher);
 
         EXPECT_CALL(*mock_osc_interface, init()).Times(1).WillOnce(Return(true));
 
         ASSERT_EQ(ControlFrontendStatus::OK, _osc_frontend->init());
-        _osc_controller.set_osc_frontend(_osc_frontend.get());
+        _osc_controller->set_osc_frontend(_osc_frontend.get());
     }
 
     EngineMockup _test_engine{TEST_SAMPLE_RATE};
 
     sushi::control::ControlMockup _controller;
-    OscController _osc_controller{&_test_engine};
+    std::unique_ptr<OscController> _osc_controller;
 
     std::unique_ptr<OSCFrontend> _osc_frontend;
 
@@ -60,13 +61,13 @@ protected:
 
 TEST_F(OscControllerEventTestFrontend, TestBasicPolling)
 {
-    auto send_port = _osc_controller.get_send_port();
-    auto receive_port = _osc_controller.get_receive_port();
+    auto send_port = _osc_controller->get_send_port();
+    auto receive_port = _osc_controller->get_receive_port();
 
     ASSERT_EQ(send_port, 24023);
     ASSERT_EQ(receive_port, 24024);
 
-    auto enabled_outputs = _osc_controller.get_enabled_parameter_outputs();
+    auto enabled_outputs = _osc_controller->get_enabled_parameter_outputs();
 
     ASSERT_EQ(enabled_outputs.size(), 0u);
 }
@@ -80,25 +81,25 @@ TEST_F(OscControllerEventTestFrontend, TestEnablingAndDisablingOfOSCOutput)
     const auto parameter = processor->parameter_from_name("param 1");
     ObjectId parameter_id = parameter->id();
 
-    auto event_status_enable = _osc_controller.enable_output_for_parameter(processor_id, parameter_id);
+    auto event_response_enable = _osc_controller->enable_output_for_parameter(processor_id, parameter_id);
 
-    ASSERT_EQ(control::ControlStatus::OK, event_status_enable);
-    auto execution_status1 = _test_dispatcher->execute_engine_event(&_test_engine);
-    ASSERT_EQ(execution_status1, EventStatus::HANDLED_OK);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, event_response_enable.status);
+    auto execution_status_1 = _test_dispatcher->execute_engine_event(&_test_engine);
+    ASSERT_EQ(execution_status_1, EventStatus::HANDLED_OK);
 
-    auto enabled_outputs1 = _osc_controller.get_enabled_parameter_outputs();
+    auto enabled_outputs1 = _osc_controller->get_enabled_parameter_outputs();
 
     ASSERT_EQ(enabled_outputs1.size(), 1u);
 
     ASSERT_EQ(enabled_outputs1[0], "/parameter/processor/param_1");
 
-    auto event_status_disable = _osc_controller.disable_output_for_parameter(processor_id, parameter_id);
+    auto event_response_disable = _osc_controller->disable_output_for_parameter(processor_id, parameter_id);
 
-    ASSERT_EQ(control::ControlStatus::OK, event_status_disable);
-    auto execution_status2 = _test_dispatcher->execute_engine_event(&_test_engine);
-    ASSERT_EQ(execution_status2, EventStatus::HANDLED_OK);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, event_response_disable.status);
+    auto execution_status_2 = _test_dispatcher->execute_engine_event(&_test_engine);
+    ASSERT_EQ(execution_status_2, EventStatus::HANDLED_OK);
 
-    auto enabled_outputs2 = _osc_controller.get_enabled_parameter_outputs();
+    auto enabled_outputs2 = _osc_controller->get_enabled_parameter_outputs();
 
     ASSERT_EQ(enabled_outputs2.size(), 0u);
 }

@@ -22,7 +22,7 @@ protected:
         bool debug_mode_sw = false;
         _audio_engine = std::make_unique<AudioEngine>(TEST_SAMPLE_RATE, 1, "", debug_mode_sw, new EventDispatcherMockup());
         _event_dispatcher_mockup = static_cast<EventDispatcherMockup*>(_audio_engine->event_dispatcher());
-        _module_under_test = std::make_unique<AudioRoutingController>(_audio_engine.get());
+        _module_under_test = std::make_unique<AudioRoutingController>(_audio_engine.get(), _event_dispatcher_mockup);
 
         _audio_engine->set_audio_channels(8, 8);
 
@@ -42,10 +42,12 @@ TEST_F(AudioRoutingControllerTest, TestGettingAudioRouting)
     EXPECT_EQ(0u, connections.size());
     connections = _module_under_test->get_all_output_connections();
     EXPECT_EQ(0u, connections.size());
-    connections = _module_under_test->get_input_connections_for_track(static_cast<int>(_track_id));
-    EXPECT_EQ(0u, connections.size());
-    connections = _module_under_test->get_output_connections_for_track(static_cast<int>(_track_id));
-    EXPECT_EQ(0u, connections.size());
+    auto connection_response = _module_under_test->get_input_connections_for_track(static_cast<int>(_track_id));
+    EXPECT_EQ(0u, connection_response.second.size());
+    EXPECT_EQ(control::ControlStatus::OK, connection_response.first);
+    connection_response = _module_under_test->get_output_connections_for_track(static_cast<int>(_track_id));
+    EXPECT_EQ(0u, connection_response.second.size());
+    EXPECT_EQ(control::ControlStatus::OK, connection_response.first);
 
     // Connect the track to input channels 2 & 3 and output channels 4 & 5
     auto status = _audio_engine->connect_audio_input_bus(1, 0, _track_id);
@@ -71,29 +73,31 @@ TEST_F(AudioRoutingControllerTest, TestGettingAudioRouting)
     EXPECT_EQ(1, connections[1].track_channel);
     EXPECT_EQ(_track_id, ObjectId(connections[1].track_id));
 
-    connections = _module_under_test->get_input_connections_for_track(static_cast<int>(_track_id));
-    EXPECT_EQ(2u, connections.size());
-    connections = _module_under_test->get_output_connections_for_track(static_cast<int>(_track_id));
-    EXPECT_EQ(2u, connections.size());
+    connection_response = _module_under_test->get_input_connections_for_track(static_cast<int>(_track_id));
+    EXPECT_EQ(control::ControlStatus::OK, connection_response.first);
+    EXPECT_EQ(2u, connection_response.second.size());
+    connection_response = _module_under_test->get_output_connections_for_track(static_cast<int>(_track_id));
+    EXPECT_EQ(control::ControlStatus::OK, connection_response.first);
+    EXPECT_EQ(2u, connection_response.second.size());
 
     // Test for non-existing tracks as well
-    connections = _module_under_test->get_input_connections_for_track(12345);
-    EXPECT_EQ(0u, connections.size());
-    connections = _module_under_test->get_output_connections_for_track(23456);
-    EXPECT_EQ(0u, connections.size());
+    connection_response = _module_under_test->get_input_connections_for_track(12345);
+    EXPECT_EQ(control::ControlStatus::NOT_FOUND, connection_response.first);
+    connection_response = _module_under_test->get_output_connections_for_track(23456);
+    EXPECT_EQ(control::ControlStatus::NOT_FOUND, connection_response.first);
 }
 
 TEST_F(AudioRoutingControllerTest, TestSettingAudioRouting)
 {
     // Connect using controller functions (using events)
-    auto status = _module_under_test->connect_input_channel_to_track(_track_id, 0, 2);
-    ASSERT_EQ(control::ControlStatus::OK, status);
+    auto response = _module_under_test->connect_input_channel_to_track(_track_id, 0, 2);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, response.status);
 
     auto execution_status1 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
     ASSERT_EQ(execution_status1, EventStatus::HANDLED_OK);
 
-    status = _module_under_test->connect_input_channel_to_track(_track_id, 1, 3);
-    ASSERT_EQ(control::ControlStatus::OK, status);
+    response = _module_under_test->connect_input_channel_to_track(_track_id, 1, 3);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, response.status);
 
     auto execution_status2 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
     ASSERT_EQ(execution_status2, EventStatus::HANDLED_OK);
@@ -108,14 +112,14 @@ TEST_F(AudioRoutingControllerTest, TestSettingAudioRouting)
     EXPECT_EQ(_track_id, ObjectId(connections[1].track_id));
 
     // Do the same for output connections
-    status = _module_under_test->connect_output_channel_to_track(_track_id, 0, 4);
-    ASSERT_EQ(control::ControlStatus::OK, status);
+    response = _module_under_test->connect_output_channel_to_track(_track_id, 0, 4);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, response.status);
 
     auto execution_status3 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
     ASSERT_EQ(execution_status3, EventStatus::HANDLED_OK);
 
-    status = _module_under_test->connect_output_channel_to_track(_track_id, 1, 5);
-    ASSERT_EQ(control::ControlStatus::OK, status);
+    response = _module_under_test->connect_output_channel_to_track(_track_id, 1, 5);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, response.status);
 
     auto execution_status4 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
     ASSERT_EQ(execution_status4, EventStatus::HANDLED_OK);
@@ -139,22 +143,22 @@ TEST_F(AudioRoutingControllerTest, TestRemovingAudioRouting)
     ASSERT_EQ(EngineReturnStatus::OK, engine_status);
 
     // Disconnect using controller functions (using events)
-    auto status = _module_under_test->disconnect_input(_track_id, 0, 2);
-    ASSERT_EQ(control::ControlStatus::OK, status);
+    auto response = _module_under_test->disconnect_input(_track_id, 0, 2);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, response.status);
 
-    auto execution_status1 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
-    ASSERT_EQ(execution_status1, EventStatus::HANDLED_OK);
+    auto execution_status_1 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
+    ASSERT_EQ(execution_status_1, EventStatus::HANDLED_OK);
 
     auto connections = _module_under_test->get_all_input_connections();
     EXPECT_EQ(1u, connections.size());
     connections = _module_under_test->get_all_output_connections();
     EXPECT_EQ(2u, connections.size());
 
-    status = _module_under_test->disconnect_all_outputs_from_track(_track_id);
-    ASSERT_EQ(control::ControlStatus::OK, status);
+    response = _module_under_test->disconnect_all_outputs_from_track(_track_id);
+    ASSERT_EQ(control::ControlStatus::ASYNC_RESPONSE, response.status);
 
-    auto execution_status2 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
-    ASSERT_EQ(execution_status2, EventStatus::HANDLED_OK);
+    auto execution_status_2 = _event_dispatcher_mockup->execute_engine_event(_audio_engine.get());
+    ASSERT_EQ(execution_status_2, EventStatus::HANDLED_OK);
 
     connections = _module_under_test->get_all_input_connections();
     EXPECT_EQ(1u, connections.size());

@@ -7,6 +7,7 @@
 #include "engine/base_event_dispatcher.h"
 #include "dummy_processor.h"
 #include "engine/midi_dispatcher.h"
+#include "engine/controller/completion_sender.h"
 
 using namespace sushi;
 using namespace sushi::internal;
@@ -15,7 +16,7 @@ using namespace sushi::internal::engine;
 using namespace sushi::internal::midi_dispatcher;
 
 // Dummy event dispatcher
-class EventDispatcherMockup : public dispatcher::BaseEventDispatcher
+class EventDispatcherMockup : public dispatcher::BaseEventDispatcher, public engine::CompletionSender
 {
 public:
     enum class Action {
@@ -116,6 +117,13 @@ public:
             _queue.pop_back();
             return e;
         }
+    }
+
+    int send_with_completion_notification([[maybe_unused]] std::unique_ptr<Event> event) override
+    {
+        int id = event->id();
+        post_event(std::move(event));
+        return id;
     }
 
 private:

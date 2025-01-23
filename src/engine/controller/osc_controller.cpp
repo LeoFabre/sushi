@@ -22,9 +22,9 @@
 
 namespace sushi::internal::engine::controller_impl {
 
-OscController::OscController(BaseEngine* engine) : _event_dispatcher(engine->event_dispatcher()),
-                                                   _processors(engine->processor_container()) {}
-
+OscController::OscController(BaseEngine* engine, CompletionSender* sender) : _event_dispatcher(engine->event_dispatcher()),
+                                                                             _processors(engine->processor_container()),
+                                                                             _sender(sender) {}
 
 std::string OscController::get_send_ip() const
 {
@@ -62,11 +62,11 @@ std::vector<std::string> OscController::get_enabled_parameter_outputs() const
     return {};
 }
 
-control::ControlStatus OscController::enable_output_for_parameter(int processor_id, int parameter_id)
+control::ControlResponse OscController::enable_output_for_parameter(int processor_id, int parameter_id)
 {
     if (_osc_frontend == nullptr)
     {
-        return control::ControlStatus::UNSUPPORTED_OPERATION;
+        return {control::ControlStatus::UNSUPPORTED_OPERATION, 0};
     }
 
     auto lambda = [=, this] () -> int
@@ -77,35 +77,34 @@ control::ControlStatus OscController::enable_output_for_parameter(int processor_
         auto processor = _processors->processor(processor_id);
         if (processor == nullptr)
         {
-            return EventStatus::ERROR;
+            return ControlEventStatus::NOT_FOUND;
         }
 
         auto parameter_descriptor = processor->parameter_from_id(parameter_id);
         if (parameter_descriptor == nullptr)
         {
-            return EventStatus::ERROR;
+            return ControlEventStatus::NOT_FOUND;
         }
 
         bool status = _osc_frontend->connect_from_parameter(processor->name(), parameter_descriptor->name());
 
         if (status == false)
         {
-            return EventStatus::ERROR;
+            return ControlEventStatus::ERROR;
         }
 
-        return EventStatus::HANDLED_OK;
+        return ControlEventStatus::OK;
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus OscController::disable_output_for_parameter(int processor_id, int parameter_id)
+control::ControlResponse OscController::disable_output_for_parameter(int processor_id, int parameter_id)
 {
     if (_osc_frontend == nullptr)
     {
-        return control::ControlStatus::UNSUPPORTED_OPERATION;
+        return {control::ControlStatus::UNSUPPORTED_OPERATION, 0};
     }
 
     auto lambda = [=, this] () -> int
@@ -122,22 +121,21 @@ control::ControlStatus OscController::disable_output_for_parameter(int processor
         auto parameter_descriptor = processor->parameter_from_id(parameter_id);
         if (parameter_descriptor == nullptr)
         {
-            return EventStatus::ERROR;
+            return ControlEventStatus::NOT_FOUND;
         }
 
         bool status = _osc_frontend->disconnect_from_parameter(processor->name(), parameter_descriptor->name());
 
         if (status == false)
         {
-            return EventStatus::ERROR;
+            return ControlEventStatus::ERROR;
         }
 
-        return EventStatus::HANDLED_OK;
+        return ControlEventStatus::OK;
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
 void OscController::set_osc_frontend(control_frontend::OSCFrontend* osc_frontend)
@@ -145,40 +143,38 @@ void OscController::set_osc_frontend(control_frontend::OSCFrontend* osc_frontend
     _osc_frontend = osc_frontend;
 }
 
-control::ControlStatus OscController::enable_all_output()
+control::ControlResponse OscController::enable_all_output()
 {
     if (_osc_frontend == nullptr)
     {
-        return control::ControlStatus::UNSUPPORTED_OPERATION;
+        return {control::ControlStatus::UNSUPPORTED_OPERATION, 0};
     }
 
     auto lambda = [=, this] () -> int
     {
         _osc_frontend->connect_from_all_parameters();
-        return EventStatus::HANDLED_OK;
+        return ControlEventStatus::OK;
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus OscController::disable_all_output()
+control::ControlResponse OscController::disable_all_output()
 {
     if (_osc_frontend == nullptr)
     {
-        return control::ControlStatus::UNSUPPORTED_OPERATION;
+        return {control::ControlStatus::UNSUPPORTED_OPERATION, 0};
     }
 
     auto lambda = [=, this] () -> int
     {
         _osc_frontend->disconnect_from_all_parameters();
-        return EventStatus::HANDLED_OK;
+        return ControlEventStatus::OK;
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
 } // end namespace sushi::internal::engine::controller_impl
