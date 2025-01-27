@@ -22,8 +22,7 @@
 
 namespace sushi::internal::engine::controller_impl {
 
-OscController::OscController(BaseEngine* engine, CompletionSender* sender) : _event_dispatcher(engine->event_dispatcher()),
-                                                                             _processors(engine->processor_container()),
+OscController::OscController(BaseEngine* engine, CompletionSender* sender) : _processors(engine->processor_container()),
                                                                              _sender(sender) {}
 
 std::string OscController::get_send_ip() const

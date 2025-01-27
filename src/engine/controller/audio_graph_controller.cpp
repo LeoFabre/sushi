@@ -50,7 +50,6 @@ inline control::TrackInfo to_external(const Track* track, std::vector<int> proc_
 
 AudioGraphController::AudioGraphController(BaseEngine* engine,
                                            CompletionSender* sender) : _engine(engine),
-                                                                       _event_dispatcher(engine->event_dispatcher()),
                                                                        _processors(engine->processor_container()),
                                                                        _sender(sender)
 {}

@@ -56,7 +56,6 @@ public:
     control::ControlResponse disable_all_output() override;
 
 private:
-    dispatcher::BaseEventDispatcher* _event_dispatcher;
     control_frontend::OSCFrontend* _osc_frontend {nullptr};
     const engine::BaseProcessorContainer* _processors;
     CompletionSender* _sender;

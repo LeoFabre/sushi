@@ -50,7 +50,6 @@ enum class ControlStatus
     NOT_FOUND,
     OUT_OF_RANGE,
     INVALID_ARGUMENTS
-    // TODO - TIMEOUT?
 };
 
 enum class PlayingMode

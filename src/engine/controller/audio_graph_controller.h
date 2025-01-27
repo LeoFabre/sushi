@@ -88,10 +88,7 @@ public:
 private:
     std::vector<int> _get_processor_ids(int track_id) const;
 
-    int _send_with_completion_callback(std::unique_ptr<Event> event);
-
     engine::BaseEngine*                     _engine;
-    dispatcher::BaseEventDispatcher*        _event_dispatcher;
     const engine::BaseProcessorContainer*   _processors;
     CompletionSender*                       _sender;
 };
