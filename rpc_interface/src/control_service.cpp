@@ -2138,6 +2138,7 @@ NotificationControlService::NotificationControlService(sushi::control::SushiCont
     _controller->subscribe_to_notifications(sushi::control::NotificationType::PROCESSOR_UPDATE, this);
     _controller->subscribe_to_notifications(sushi::control::NotificationType::PARAMETER_CHANGE, this);
     _controller->subscribe_to_notifications(sushi::control::NotificationType::PROPERTY_CHANGE, this);
+    _controller->subscribe_to_notifications(sushi::control::NotificationType::ASYNC_COMMAND_COMPLETION, this);
 }
 
 void NotificationControlService::notification(const sushi::control::ControlNotification* notification)
@@ -2172,6 +2173,11 @@ void NotificationControlService::notification(const sushi::control::ControlNotif
         case sushi::control::NotificationType::PROPERTY_CHANGE:
         {
             _forward_property_notification_to_subscribers(notification);
+            break;
+        }
+        case sushi::control::NotificationType::ASYNC_COMMAND_COMPLETION:
+        {
+            _forward_async_command_notification_to_subscribers(notification);
             break;
         }
         default:

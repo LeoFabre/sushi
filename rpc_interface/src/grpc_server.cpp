@@ -55,6 +55,7 @@ void GrpcServer::AsyncRpcLoop()
     new SubscribeToProcessorChangesCallData(_notification_control_service.get(), _async_rpc_queue.get());
     new SubscribeToParameterUpdatesCallData(_notification_control_service.get(), _async_rpc_queue.get());
     new SubscribeToPropertyUpdatesCallData(_notification_control_service.get(), _async_rpc_queue.get());
+    new SubscribeToAsyncCommandUpdatesCallData(_notification_control_service.get(), _async_rpc_queue.get());
 
     while (_running.load())
     {
