@@ -26,7 +26,31 @@
 
 namespace sushi::internal::engine::controller_impl {
 
-    control::MidiCCConnection populate_cc_connection(const midi_dispatcher::CCInputConnection& connection)
+inline int map_status(midi_dispatcher::MidiDispatcherStatus status)
+{
+    switch (status)
+    {
+        case midi_dispatcher::MidiDispatcherStatus::OK:
+            return ControlEventStatus::OK;
+
+        case midi_dispatcher::MidiDispatcherStatus::INVALID_TRACK:
+        case midi_dispatcher::MidiDispatcherStatus::INVALID_PROCESSOR:
+        case midi_dispatcher::MidiDispatcherStatus::INVALID_PARAMETER:
+            return ControlEventStatus::NOT_FOUND;
+
+        case midi_dispatcher::MidiDispatcherStatus::INVAlID_CHANNEL:
+            return ControlEventStatus::OUT_OF_RANGE;
+
+        case midi_dispatcher::MidiDispatcherStatus::INVALID_MIDI_OUTPUT:
+        case midi_dispatcher::MidiDispatcherStatus::INVALID_MIDI_INPUT:
+            return ControlEventStatus::INVALID_ARGUMENTS;
+
+        default:
+            return ControlEventStatus::ERROR;
+    }
+}
+
+control::MidiCCConnection populate_cc_connection(const midi_dispatcher::CCInputConnection& connection)
 {
     control::MidiCCConnection ext_connection;
 
@@ -204,14 +228,7 @@ control::ControlResponse MidiController::connect_kbd_input_to_track(int track_id
             status = _midi_dispatcher->connect_raw_midi_to_track(port, track_id, int_channel);
         }
 
-        if (status == midi_dispatcher::MidiDispatcherStatus::OK)
-        {
-            return EventStatus::HANDLED_OK;
-        }
-        else
-        {
-            return EventStatus::ERROR;
-        }
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -229,14 +246,7 @@ control::ControlResponse MidiController::connect_kbd_output_from_track(int track
         midi_dispatcher::MidiDispatcherStatus status;
         status = _midi_dispatcher->connect_track_to_output(port, track_id, int_channel);
 
-        if (status == midi_dispatcher::MidiDispatcherStatus::OK)
-        {
-            return EventStatus::HANDLED_OK;
-        }
-        else
-        {
-            return EventStatus::ERROR;
-        }
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -265,14 +275,7 @@ control::ControlResponse MidiController::connect_cc_to_parameter(int processor_i
                                                                 relative_mode,
                                                                 int_channel);
 
-        if (status == midi_dispatcher::MidiDispatcherStatus::OK)
-        {
-            return EventStatus::HANDLED_OK;
-        }
-        else
-        {
-            return EventStatus::ERROR;
-        }
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -292,14 +295,7 @@ control::ControlResponse MidiController::connect_pc_to_processor(int processor_i
                                                            processor_id,
                                                            int_channel);
 
-        if (status == midi_dispatcher::MidiDispatcherStatus::OK)
-        {
-            return EventStatus::HANDLED_OK;
-        }
-        else
-        {
-            return EventStatus::ERROR;
-        }
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -327,14 +323,7 @@ control::ControlResponse MidiController::disconnect_kbd_input(int track_id,
                                                                       int_channel);
         }
 
-        if (status == midi_dispatcher::MidiDispatcherStatus::OK)
-        {
-            return EventStatus::HANDLED_OK;
-        }
-        else
-        {
-            return EventStatus::ERROR;
-        }
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -350,14 +339,7 @@ control::ControlResponse MidiController::disconnect_kbd_output(int track_id, con
         midi_dispatcher::MidiDispatcherStatus status;
         status = _midi_dispatcher->disconnect_track_from_output(port, track_id, int_channel);
 
-        if (status == midi_dispatcher::MidiDispatcherStatus::OK)
-        {
-            return EventStatus::HANDLED_OK;
-        }
-        else
-        {
-            return EventStatus::ERROR;
-        }
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -376,14 +358,7 @@ control::ControlResponse MidiController::disconnect_cc(int processor_id,
                                                                            cc_number,
                                                                            int_channel);
 
-        if (status == midi_dispatcher::MidiDispatcherStatus::OK)
-        {
-            return EventStatus::HANDLED_OK;
-        }
-        else
-        {
-            return EventStatus::ERROR;
-        }
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -401,15 +376,7 @@ control::ControlResponse MidiController::disconnect_pc(int processor_id, control
         status = _midi_dispatcher->disconnect_pc_from_processor(port,
                                                                 processor_id,
                                                                 int_channel);
-
-        if (status == midi_dispatcher::MidiDispatcherStatus::OK)
-        {
-            return EventStatus::HANDLED_OK;
-        }
-        else
-        {
-            return EventStatus::ERROR;
-        }
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -421,15 +388,7 @@ control::ControlResponse MidiController::disconnect_all_cc_from_processor(int pr
     auto lambda = [=, this] () -> int
     {
         const auto status = _midi_dispatcher->disconnect_all_cc_from_processor(processor_id);
-
-        if (status == midi_dispatcher::MidiDispatcherStatus::OK)
-        {
-            return EventStatus::HANDLED_OK;
-        }
-        else
-        {
-            return EventStatus::ERROR;
-        }
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -441,15 +400,7 @@ control::ControlResponse MidiController::disconnect_all_pc_from_processor(int pr
     auto lambda = [=, this] () -> int
     {
         const auto status = _midi_dispatcher->disconnect_all_pc_from_processor(processor_id);
-
-        if (status == midi_dispatcher::MidiDispatcherStatus::OK)
-        {
-            return EventStatus::HANDLED_OK;
-        }
-        else
-        {
-            return EventStatus::ERROR;
-        }
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));

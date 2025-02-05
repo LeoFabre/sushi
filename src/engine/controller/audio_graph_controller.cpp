@@ -208,7 +208,7 @@ control::ControlResponse AudioGraphController::set_processor_state(int processor
             return EventStatus::HANDLED_OK;
         }
         ELKLOG_LOG_ERROR("Processor {} not found", processor_id);
-        return EventStatus::ERROR;
+        return ControlEventStatus::NOT_FOUND;
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -234,7 +234,7 @@ control::ControlResponse AudioGraphController::create_track(const std::string& n
     auto lambda = [=, this] () -> int
     {
         auto [status, track_id] = _engine->create_track(name, channels);
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -247,7 +247,7 @@ control::ControlResponse AudioGraphController::create_multibus_track(const std::
     auto lambda = [=, this] () -> int
     {
         auto [status, track_id] = _engine->create_multibus_track(name, buses);
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -260,7 +260,7 @@ control::ControlResponse AudioGraphController::create_pre_track(const std::strin
     auto lambda = [=, this] () -> int
     {
         auto [status, track_id] = _engine->create_pre_track(name);
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -272,7 +272,7 @@ control::ControlResponse AudioGraphController::create_post_track(const std::stri
     ELKLOG_LOG_DEBUG("create_post_track called with name {}", name);
     auto lambda = [=, this]() -> int {
         auto [status, track_id] = _engine->create_post_track(name);
-        return status == EngineReturnStatus::OK ? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -303,7 +303,7 @@ control::ControlResponse AudioGraphController::move_processor_on_track(int proce
         auto status = _engine->remove_plugin_from_track(processor_id, source_track_id);
         if (status != EngineReturnStatus::OK)
         {
-            return EventStatus::HANDLED_OK;
+            return map_status(status);
         }
 
         status = _engine->add_plugin_to_track(processor_id, dest_track_id, before_processor_id);
@@ -353,7 +353,7 @@ control::ControlResponse AudioGraphController::create_processor_on_track(const s
         auto [status, plugin_id] = _engine->create_processor(plugin_info, name);
         if (status != EngineReturnStatus::OK)
         {
-            return EventStatus::ERROR;
+            return ControlEventStatus::ERROR;
         }
 
         ELKLOG_LOG_DEBUG("Adding plugin {} to track {}", name, track_id);
@@ -363,8 +363,7 @@ control::ControlResponse AudioGraphController::create_processor_on_track(const s
             ELKLOG_LOG_ERROR("Failed to load plugin {} to track {}, destroying plugin", plugin_id, track_id);
             _engine->delete_plugin(plugin_id);
         }
-
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -382,7 +381,7 @@ control::ControlResponse AudioGraphController::delete_processor_from_track(int p
         {
             status = _engine->delete_plugin(processor_id);
         }
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
@@ -397,7 +396,7 @@ control::ControlResponse AudioGraphController::delete_track(int track_id)
         auto track = _processors->track(track_id);
         if (track == nullptr)
         {
-            return EventStatus::ERROR;
+            return ControlEventStatus::NOT_FOUND;
         }
         auto processors = _processors->processors_on_track(track_id);
 
@@ -416,7 +415,7 @@ control::ControlResponse AudioGraphController::delete_track(int track_id)
             }
         }
         auto status = _engine->delete_track(track_id);
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
