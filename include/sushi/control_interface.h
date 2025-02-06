@@ -464,7 +464,7 @@ public:
     virtual ControlStatus set_processor_bypass_state(int processor_id, bool bypass_enabled) = 0;
     virtual ControlStatus set_processor_state(int processor_id, const ProcessorState& state) = 0;
 
-    virtual control::ControlStatus create_track(const std::string& name, int channels, std::optional<int> thread) = 0;
+    virtual ControlStatus create_track(const std::string& name, int channels, std::optional<int> thread) = 0;
     virtual ControlStatus create_multibus_track(const std::string& name, int buses, std::optional<int> thread) = 0;
     virtual ControlStatus create_pre_track(const std::string& name) = 0;
     virtual ControlStatus create_post_track(const std::string& name) = 0;
