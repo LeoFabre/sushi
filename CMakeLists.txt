@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 3.15..3.23)
 
-if(${CMAKE_VERSION} VERSION_LESS 3.12)
-    cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
-endif()
-
 # Require out-of-source builds
 file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
 if(EXISTS "${LOC_PATH}")
@@ -699,6 +695,7 @@ set(COMMON_LIBRARIES
     oscpack
     elklog
     freeverb
+    elk::warningSuppressor
     ${TWINE_LIB}
 )
 
@@ -722,7 +719,6 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${EXTRA_BUILD_LIBRARIES} ${COMMON_LIBRARIES})
-target_link_libraries(${PROJECT_NAME} INTERFACE $<BUILD_INTERFACE:elk::warningSuppressor>)
 
 ####################################
 #  Compiler Flags and definitions  #
