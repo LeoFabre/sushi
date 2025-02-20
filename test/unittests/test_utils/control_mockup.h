@@ -21,8 +21,8 @@ const ProcessorInfo processor_1{0, "proc 1", "proc 1", 0 , 0};
 const ProcessorInfo processor_2{1, "proc 2", "proc 2", 1 , 1};
 const std::vector<ProcessorInfo> processors{processor_1, processor_2};
 
-const TrackInfo track1{0, "track 1", "track 1", 0, 0, TrackType::REGULAR, {}};
-const TrackInfo track2{1, "track 2", "track 2", 1, 1, TrackType::REGULAR, {}};
+const TrackInfo track1{0, "track 1", "track 1", 0, 0, 0, TrackType::REGULAR, {}};
+const TrackInfo track2{1, "track 2", "track 2", 1, 1, 1, TrackType::REGULAR, {}};
 const std::vector<TrackInfo> tracks{track1, track2};
 
 constexpr float                 DEFAULT_SAMPLERATE = 48000.0f;
@@ -35,7 +35,7 @@ constexpr PlayingMode           DEFAULT_PLAYING_MODE = PlayingMode::PLAYING;
 constexpr SyncMode              DEFAULT_SYNC_MODE = SyncMode::INTERNAL;
 constexpr TimeSignature         DEFAULT_TIME_SIGNATURE = TimeSignature{4, 4};
 constexpr ControlStatus         DEFAULT_CONTROL_STATUS = ControlStatus::OK;
-constexpr CpuTimings            DEFAULT_TIMINGS = CpuTimings{1.0f, 0.5f, 1.5f};
+constexpr Timings               DEFAULT_TIMINGS = Timings{1.0f, 0.5f, 1.5f};
 constexpr int                   DEFAULT_PROGRAM_ID = 1;
 constexpr auto                  DEFAULT_PROGRAM_NAME = "program 1";
 const std::vector<std::string>  DEFAULT_PROGRAMS = {DEFAULT_PROGRAM_NAME, "program 2"};
@@ -160,15 +160,15 @@ public:
 
     std::pair<ControlStatus, CpuTimings> get_engine_timings() const override
     {
-        return {_return_status, DEFAULT_TIMINGS};
+        return {_return_status, {DEFAULT_TIMINGS, {}}};
     }
 
-    std::pair<ControlStatus, CpuTimings> get_track_timings(int /*track_id*/) const override
+    std::pair<ControlStatus, Timings> get_track_timings(int /*track_id*/) const override
     {
         return {_return_status, DEFAULT_TIMINGS};
     }
 
-    std::pair<ControlStatus, CpuTimings> get_processor_timings(int /*processor_id*/) const override
+    std::pair<ControlStatus, Timings> get_processor_timings(int /*processor_id*/) const override
     {
         return {_return_status, DEFAULT_TIMINGS};
     }
@@ -323,7 +323,7 @@ public:
         return _return_status;
     }
 
-    ControlStatus create_track(const std::string& name, int channels) override
+    control::ControlStatus create_track(const std::string& name, int channels, std::optional<int> thread) override
     {
         _args_from_last_call.clear();
         _args_from_last_call["name"] = name;
@@ -332,7 +332,7 @@ public:
         return _return_status;
     }
 
-    ControlStatus create_multibus_track(const std::string& name, int buses) override
+    ControlStatus create_multibus_track(const std::string& name, int buses, std::optional<int> thread) override
     {
         _args_from_last_call.clear();
         _args_from_last_call["name"] = name;

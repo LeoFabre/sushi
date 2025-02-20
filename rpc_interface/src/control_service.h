@@ -84,8 +84,8 @@ public:
     grpc::Status GetTimingsEnabled(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::GenericBoolValue* response) override;
     grpc::Status SetTimingsEnabled(grpc::ServerContext* context, const sushi_rpc::GenericBoolValue* request, sushi_rpc::GenericVoidValue* response) override;
     grpc::Status GetEngineTimings(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::CpuTimings* response) override;
-    grpc::Status GetTrackTimings(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::CpuTimings* response) override;
-    grpc::Status GetProcessorTimings(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::CpuTimings* response) override;
+    grpc::Status GetTrackTimings(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::Timings* response) override;
+    grpc::Status GetProcessorTimings(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::Timings* response) override;
     grpc::Status ResetAllTimings(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::GenericVoidValue* response) override;
     grpc::Status ResetTrackTimings(grpc::ServerContext* context, const sushi_rpc::TrackIdentifier* request, sushi_rpc::GenericVoidValue* response) override;
     grpc::Status ResetProcessorTimings(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::GenericVoidValue* response) override;

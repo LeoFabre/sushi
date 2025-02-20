@@ -28,8 +28,9 @@ protected:
 
     void SetUp(int cores)
     {
-        _module_under_test = std::make_unique<AudioGraph>(cores, TEST_MAX_TRACKS, SAMPLE_RATE, "");
+        _module_under_test = std::make_unique<AudioGraph>(cores, TEST_MAX_TRACKS, &_timer, SAMPLE_RATE, "");
         _accessor = std::make_unique<AudioGraphAccessor>(*_module_under_test);
+        _timer.enable(true);
     }
 
     HostControlMockup _hc;
@@ -50,7 +51,7 @@ TEST_F(TestAudioGraph, TestSingleCoreOperation)
     ASSERT_TRUE(_module_under_test->add(&_track_2));
 
     ASSERT_EQ(1u, _accessor->audio_graph().size());
-    ASSERT_EQ(2u, _accessor->audio_graph()[0].size());
+    ASSERT_EQ(2u, _accessor->audio_graph()[0].tracks.size());
 
     _module_under_test->render();
 
@@ -58,7 +59,13 @@ TEST_F(TestAudioGraph, TestSingleCoreOperation)
     ASSERT_TRUE(_module_under_test->remove(&_track_2));
     ASSERT_FALSE(_module_under_test->remove(&_track_2));
 
-    ASSERT_EQ(0u, _accessor->audio_graph()[0].size());
+    ASSERT_EQ(0u, _accessor->audio_graph()[0].tracks.size());
+
+    ASSERT_EQ(1, _module_under_test->threads());
+
+    _timer.enable(false);
+    // In single core operation, the audio graph should not record any timing statistics
+    ASSERT_FALSE(_timer.timings_for_node(-2).has_value());
 }
 
 /**
@@ -76,11 +83,13 @@ TEST_F(TestAudioGraph, TestMultiCoreOperation)
     ASSERT_TRUE(_module_under_test->add(&_track_1));
     ASSERT_TRUE(_module_under_test->add(&_track_2));
 
+    ASSERT_EQ(3, _module_under_test->threads());
+
     // Tracks should end up in slot 0 and 1
     ASSERT_EQ(3u, _accessor->audio_graph().size());
-    ASSERT_EQ(1u, _accessor->audio_graph()[0].size());
-    ASSERT_EQ(1u, _accessor->audio_graph()[1].size());
-    ASSERT_EQ(0u, _accessor->audio_graph()[2].size());
+    ASSERT_EQ(1u, _accessor->audio_graph()[0].tracks.size());
+    ASSERT_EQ(1u, _accessor->audio_graph()[1].tracks.size());
+    ASSERT_EQ(0u, _accessor->audio_graph()[2].tracks.size());
 
     auto event = RtEvent::make_note_on_event(_track_1.id(), 0, 0, 48, 1.0f);
     _track_1.process_event(event);
@@ -92,6 +101,13 @@ TEST_F(TestAudioGraph, TestMultiCoreOperation)
     EXPECT_EQ(1, queues[0].size());
     EXPECT_EQ(1, queues[1].size());
     EXPECT_EQ(0, queues[2].size());
+
+    _timer.enable(false);
+    // Thread ids should be counted backwards from -2 (since -1 is the full engine and >0 is for tracks and processors)
+    ASSERT_TRUE(_timer.timings_for_node(-2).has_value());
+    ASSERT_TRUE(_timer.timings_for_node(-3).has_value());
+    ASSERT_TRUE(_timer.timings_for_node(-4).has_value());
+    ASSERT_FALSE(_timer.timings_for_node(-5).has_value());
 }
 #endif
 
@@ -103,5 +119,5 @@ TEST_F(TestAudioGraph, TestMaxNumberOfTracks)
     ASSERT_FALSE(_module_under_test->add(&_track_2));
 
     ASSERT_EQ(1u, _accessor->audio_graph().size());
-    ASSERT_EQ(2u, _accessor->audio_graph()[0].size());
+    ASSERT_EQ(2u, _accessor->audio_graph()[0].tracks.size());
 }

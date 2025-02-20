@@ -117,6 +117,16 @@ TEST (TestRealtimeEvents, TestFactoryFunction)
     EXPECT_EQ(131u, event.processor_id());
     EXPECT_TRUE(event.processor_command_event()->value());
 
+    event = RtEvent::make_add_track_event(121, 2);
+    EXPECT_EQ(RtEventType::ADD_TRACK, event.type());
+    EXPECT_EQ(121, event.track_event()->track());
+    EXPECT_EQ(2, event.track_event()->thread().value());
+
+    event = RtEvent::make_remove_track_event(123);
+    EXPECT_EQ(RtEventType::REMOVE_TRACK, event.type());
+    EXPECT_EQ(123, event.track_event()->track());
+    EXPECT_FALSE(event.track_event()->thread().has_value());
+
     event = RtEvent::make_insert_processor_event(nullptr);
     EXPECT_EQ(RtEventType::INSERT_PROCESSOR, event.type());
     EXPECT_EQ(nullptr, event.processor_operation_event()->instance());

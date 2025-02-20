@@ -86,6 +86,7 @@ void SendPlugin::_set_destination(return_plugin::ReturnPlugin* destination)
     {
         _destination->remove_sender(this);
     }
+
     _destination = destination;
     destination->add_sender(this);
 }
@@ -147,13 +148,13 @@ void SendPlugin::process_audio(const ChunkSampleBuffer& in_buffer, ChunkSampleBu
             auto [start, end] = _bypass_manager.get_ramp();
             start *= _gain_smoother.value();
             end *= _gain_smoother.next_value();
-            _destination->send_audio_with_ramp(buffer, dest_channel, start, end);
+            _destination->send_audio_with_ramp(buffer, dest_channel, start, end, _current_processing_thread);
         }
 
         // Don't ramp, nominal case
         else if (_gain_smoother.stationary())
         {
-            _destination->send_audio(buffer, dest_channel, gain);
+            _destination->send_audio(buffer, dest_channel, gain, _current_processing_thread);
         }
 
         // Ramp because send gain was recently changed
@@ -161,7 +162,7 @@ void SendPlugin::process_audio(const ChunkSampleBuffer& in_buffer, ChunkSampleBu
         {
             float start = _gain_smoother.value();
             float end = _gain_smoother.next_value();
-            _destination->send_audio_with_ramp(buffer, dest_channel, start, end);
+            _destination->send_audio_with_ramp(buffer, dest_channel, start, end, _current_processing_thread);
         }
     }
 }

@@ -438,6 +438,22 @@ private:
     Processor* _instance;
 };
 
+class TrackRtEvent : public ReturnableRtEvent
+{
+public:
+    TrackRtEvent(RtEventType type,
+                 ObjectId track,
+                 std::optional<int> thread) : ReturnableRtEvent(type, 0),
+                                              _track{track},
+                                              _thread{thread} {}
+
+    ObjectId track() const {return _track;}
+    std::optional<int> thread() const {return _thread;}
+private:
+    ObjectId _track;
+    std::optional<int> _thread;
+};
+
 class ProcessorReorderRtEvent : public ReturnableRtEvent
 {
 public:
@@ -740,7 +756,6 @@ public:
 
     // ReturnableEvent and every event type that inherits from it
     // needs a non-const accessor function as well
-
     const ReturnableRtEvent* returnable_event() const
     {
         assert(is_returnable_event(*this));
@@ -751,6 +766,20 @@ public:
     {
         assert(is_returnable_event(*this));
         return &_returnable_event;
+    }
+
+    const TrackRtEvent* track_event() const
+    {
+        assert(_track_event.type() == RtEventType::ADD_TRACK ||
+               _track_event.type() == RtEventType::REMOVE_TRACK);
+        return &_track_event;
+    }
+
+    TrackRtEvent* track_event()
+    {
+        assert(_track_event.type() == RtEventType::ADD_TRACK ||
+               _track_event.type() == RtEventType::REMOVE_TRACK);
+        return &_track_event;
     }
 
     const ProcessorOperationRtEvent* processor_operation_event() const
@@ -769,9 +798,7 @@ public:
     {
         assert(_processor_reorder_event.type() == RtEventType::REMOVE_PROCESSOR ||
                _processor_reorder_event.type() == RtEventType::ADD_PROCESSOR_TO_TRACK ||
-               _processor_reorder_event.type() == RtEventType::REMOVE_PROCESSOR_FROM_TRACK ||
-               _processor_reorder_event.type() == RtEventType::ADD_TRACK ||
-               _processor_reorder_event.type() == RtEventType::REMOVE_TRACK);
+               _processor_reorder_event.type() == RtEventType::REMOVE_PROCESSOR_FROM_TRACK);
         ;
         return &_processor_reorder_event;
     }
@@ -780,9 +807,7 @@ public:
     {
         assert(_processor_reorder_event.type() == RtEventType::REMOVE_PROCESSOR ||
                _processor_reorder_event.type() == RtEventType::ADD_PROCESSOR_TO_TRACK ||
-               _processor_reorder_event.type() == RtEventType::REMOVE_PROCESSOR_FROM_TRACK ||
-               _processor_reorder_event.type() == RtEventType::ADD_TRACK ||
-               _processor_reorder_event.type() == RtEventType::REMOVE_TRACK);
+               _processor_reorder_event.type() == RtEventType::REMOVE_PROCESSOR_FROM_TRACK)
         ;
         return &_processor_reorder_event;
     }
@@ -1040,16 +1065,14 @@ public:
         return RtEvent(typed_event);
     }
 
-    static RtEvent make_add_track_event(ObjectId track)
+    static RtEvent make_add_track_event(ObjectId track, std::optional<int> thread)
     {
-        ProcessorReorderRtEvent typed_event(RtEventType::ADD_TRACK, 0, track, std::nullopt);
-        return RtEvent(typed_event);
+        return TrackRtEvent(RtEventType::ADD_TRACK, track, thread);
     }
 
     static RtEvent make_remove_track_event(ObjectId track)
     {
-        ProcessorReorderRtEvent typed_event(RtEventType::REMOVE_TRACK, 0, track, std::nullopt);
-        return RtEvent(typed_event);
+        return TrackRtEvent(RtEventType::REMOVE_TRACK, track, std::nullopt);
     }
 
     static RtEvent make_async_work_event(AsyncWorkCallback callback, ObjectId processor, void* data)
@@ -1204,6 +1227,7 @@ private:
     RtEvent(const ProcessorStateRtEvent& e)             : _processor_state_event(e) {}
     RtEvent(const ProcessorNotifyRtEvent& e)            : _processor_notify_event(e) {}
     RtEvent(const ReturnableRtEvent& e)                 : _returnable_event(e) {}
+    RtEvent(const TrackRtEvent& e)                      : _track_event(e) {}
     RtEvent(const ProcessorOperationRtEvent& e)         : _processor_operation_event(e) {}
     RtEvent(const ProcessorReorderRtEvent& e)           : _processor_reorder_event(e) {}
     RtEvent(const AsyncWorkRtEvent& e)                  : _async_work_event(e) {}
@@ -1236,6 +1260,7 @@ private:
         ProcessorStateRtEvent         _processor_state_event;
         ProcessorNotifyRtEvent        _processor_notify_event;
         ReturnableRtEvent             _returnable_event;
+        TrackRtEvent                  _track_event;
         ProcessorOperationRtEvent     _processor_operation_event;
         ProcessorReorderRtEvent       _processor_reorder_event;
         AsyncWorkRtEvent              _async_work_event;

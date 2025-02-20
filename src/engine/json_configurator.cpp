@@ -776,13 +776,18 @@ JsonConfigReturnStatus JsonConfigurator::_make_track(const rapidjson::Value& tra
     {
         case TrackType::REGULAR:
         {
+            std::optional<int> thread = std::nullopt;
+            if (track_def.HasMember("thread") && track_def["thread"].IsInt())
+            {
+                thread = track_def["thread"].GetInt();
+            }
             if (track_def.HasMember("multibus") && track_def["multibus"].GetBool())
             {
-                std::tie(status, track_id) = _engine->create_multibus_track(name, track_def["buses"].GetInt());
+                std::tie(status, track_id) = _engine->create_multibus_track(name, track_def["buses"].GetInt(), thread);
             }
             else if (track_def.HasMember("channels"))
             {
-                std::tie(status, track_id) = _engine->create_track(name, track_def["channels"].GetInt());
+                std::tie(status, track_id) = _engine->create_track(name, track_def["channels"].GetInt(), thread);
             }
             break;
         }

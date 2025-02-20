@@ -259,13 +259,12 @@ public:
 
     virtual EngineReturnStatus send_rt_event_to_processor(const RtEvent& /*event*/) = 0;
 
-    virtual std::pair<EngineReturnStatus, ObjectId> create_track(const std::string & /*track_id*/,
-                                                                 int /*channel_count*/)
+    virtual std::pair<EngineReturnStatus, ObjectId> create_track(const std::string&, int, std::optional<int>)
     {
         return {EngineReturnStatus::OK, 0};
     }
 
-    virtual std::pair<EngineReturnStatus, ObjectId> create_multibus_track(const std::string&, int)
+    virtual std::pair<EngineReturnStatus, ObjectId> create_multibus_track(const std::string&, int, std::optional<int>)
     {
         return {EngineReturnStatus::OK, 0};
     }

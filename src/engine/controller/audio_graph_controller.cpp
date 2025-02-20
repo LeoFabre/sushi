@@ -44,6 +44,7 @@ inline control::TrackInfo to_external(const Track* track, std::vector<int> proc_
                           .name = track->name(),
                           .channels = track->input_channels(),
                           .buses = track->buses(),
+                          .thread = track->thread(),
                           .type = to_external(track->type()),
                           .processors = std::move(proc_ids)};
 }
@@ -227,13 +228,13 @@ control::ControlStatus AudioGraphController::set_processor_bypass_state(int proc
     return control::ControlStatus::NOT_FOUND;
 }
 
-control::ControlStatus AudioGraphController::create_track(const std::string& name, int channels)
+control::ControlStatus AudioGraphController::create_track(const std::string& name, int channels, std::optional<int> thread)
 {
     ELKLOG_LOG_DEBUG("create_track called with name {} and {} channels", name, channels);
 
     auto lambda = [=, this] () -> int
     {
-        auto [status, track_id] = _engine->create_track(name, channels);
+        auto [status, track_id] = _engine->create_track(name, channels, thread);
         return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
     };
 
@@ -242,12 +243,12 @@ control::ControlStatus AudioGraphController::create_track(const std::string& nam
     return control::ControlStatus::OK;
 }
 
-control::ControlStatus AudioGraphController::create_multibus_track(const std::string& name, int buses)
+control::ControlStatus AudioGraphController::create_multibus_track(const std::string& name, int buses, std::optional<int> thread)
 {
     ELKLOG_LOG_DEBUG("create_multibus_track called with name {} and {} buses ", name, buses);
     auto lambda = [=, this] () -> int
     {
-        auto [status, track_id] = _engine->create_multibus_track(name, buses);
+        auto [status, track_id] = _engine->create_multibus_track(name, buses, thread);
         return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
     };
 
@@ -343,7 +344,7 @@ control::ControlStatus AudioGraphController::move_processor_on_track(int process
 control::ControlStatus AudioGraphController::create_processor_on_track(const std::string& name,
                                                                    const std::string& uid,
                                                                    const std::string& file,
-                                                     control::PluginType type,
+                                                                   control::PluginType type,
                                                                    int track_id,
                                                                    std::optional<int> before_processor_id)
 {
