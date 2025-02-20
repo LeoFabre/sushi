@@ -1,3 +1,12 @@
+## Next
+New Features:
+  * Tracks can be explicitly allocated to threads
+  * Send and return plugins are now zero delay under some conditions
+
+Fixes:
+  * Warning if multiple twine workers are allocated to the same cpu core
+
+
 ## 1.2.0
 
 New Features:
