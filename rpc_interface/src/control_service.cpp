@@ -247,7 +247,6 @@ inline void to_grpc(PropertyInfo& dest, const sushi::control::PropertyInfo& src)
     dest.set_label(src.label);
 }
 
-
 inline void to_grpc(sushi_rpc::ProcessorInfo& dest, const sushi::control::ProcessorInfo& src)
 {
     dest.set_id(src.id);
@@ -292,6 +291,7 @@ inline void to_grpc(sushi_rpc::TrackInfo& dest, const sushi::control::TrackInfo&
     dest.set_name(src.name);
     dest.set_channels(src.channels);
     dest.set_buses(src.buses);
+    dest.set_thread(src.thread);
     dest.mutable_type()->set_type(to_grpc(src.type));
     for (auto i : src.processors)
     {
@@ -299,11 +299,20 @@ inline void to_grpc(sushi_rpc::TrackInfo& dest, const sushi::control::TrackInfo&
     }
 }
 
-inline void to_grpc(sushi_rpc::CpuTimings& dest, const sushi::control::CpuTimings& src)
+inline void to_grpc(sushi_rpc::Timings& dest, const sushi::control::Timings& src)
 {
     dest.set_average(src.avg);
     dest.set_min(src.min);
     dest.set_max(src.max);
+}
+
+inline void to_grpc(sushi_rpc::CpuTimings& dest, const sushi::control::CpuTimings& src)
+{
+    to_grpc(*dest.mutable_main(), src.main);
+    for (const auto& thread : src.threads)
+    {
+        to_grpc(*dest.mutable_threads()->Add(), thread);
+    }
 }
 
 inline void to_grpc(sushi_rpc::AudioConnection& dest, const sushi::control::AudioConnection& src)
@@ -695,6 +704,7 @@ inline void to_grpc(sushi_rpc::TrackState& dest, sushi::control::TrackState& src
     dest.set_label(std::move(src.label));
     dest.set_channels(src.channels);
     dest.set_buses(src.buses);
+    dest.set_thread(src.thread);
     dest.mutable_type()->set_type(to_grpc(src.type));
     to_grpc(*dest.mutable_track_state(), src.track_state);
 
@@ -900,7 +910,7 @@ grpc::Status TimingControlService::GetEngineTimings(grpc::ServerContext* /*conte
 
 grpc::Status TimingControlService::GetTrackTimings(grpc::ServerContext* /*context*/,
                                                    const sushi_rpc::TrackIdentifier* request,
-                                                   sushi_rpc::CpuTimingResponse* response)
+                                                   sushi_rpc::TimingResponse* response)
 {
     auto [status, timings] = _controller->get_track_timings(request->id());
     if (status == sushi::control::ControlStatus::OK)
@@ -913,7 +923,7 @@ grpc::Status TimingControlService::GetTrackTimings(grpc::ServerContext* /*contex
 
 grpc::Status TimingControlService::GetProcessorTimings(grpc::ServerContext* /*context*/,
                                                        const sushi_rpc::ProcessorIdentifier* request,
-                                                       sushi_rpc::CpuTimingResponse* response)
+                                                       sushi_rpc::TimingResponse* response)
 {
     auto [status, timings] = _controller->get_processor_timings(request->id());
     if (status == sushi::control::ControlStatus::OK)
@@ -1147,7 +1157,8 @@ grpc::Status AudioGraphControlService::CreateTrack(grpc::ServerContext* /*contex
                                                    const sushi_rpc::CreateTrackRequest* request,
                                                    sushi_rpc::CommandResponse* response)
 {
-    auto status = _controller->create_track(request->name(), request->channels());
+    auto thread = (request->thread().has_value() ? std::optional<int>(request->thread().value()) : std::nullopt);
+    auto status = _controller->create_track(request->name(), request->channels(), thread);
     to_grpc(*response, status);
     return grpc::Status::OK;
 }
@@ -1156,7 +1167,8 @@ grpc::Status AudioGraphControlService::CreateMultibusTrack(grpc::ServerContext* 
                                                            const sushi_rpc::CreateMultibusTrackRequest* request,
                                                            sushi_rpc::CommandResponse* response)
 {
-    auto status = _controller->create_multibus_track(request->name(), request->buses());
+    auto thread = (request->thread().has_value() ? std::optional<int>(request->thread().value()) : std::nullopt);
+    auto status = _controller->create_multibus_track(request->name(), request->buses(), thread);
     to_grpc(*response, status);
     return grpc::Status::OK;
 }
@@ -2237,10 +2249,7 @@ void NotificationControlService::_forward_cpu_timing_notification_to_subscribers
 {
     auto typed_notification = static_cast<const sushi::control::CpuTimingNotification*>(notification);
     auto notification_content = std::make_shared<CpuTimings>();
-    auto timings = typed_notification->cpu_timings();
-    notification_content->set_average(timings.avg);
-    notification_content->set_min(timings.min);
-    notification_content->set_max(timings.max);
+    to_grpc(*notification_content, typed_notification->cpu_timings());
 
     std::scoped_lock lock(_timing_subscriber_lock);
     for (auto& subscriber : _timing_subscribers)

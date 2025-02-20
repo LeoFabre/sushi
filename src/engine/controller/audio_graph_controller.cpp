@@ -44,6 +44,7 @@ inline control::TrackInfo to_external(const Track* track, std::vector<int> proc_
                               .name = track->name(),
                               .channels = track->input_channels(),
                               .buses = track->buses(),
+                              .thread = track->thread(),
                               .type = to_external(track->type()),
                               .processors = std::move(proc_ids)};
 }
@@ -227,26 +228,26 @@ control::ControlResponse AudioGraphController::set_processor_bypass_state(int pr
     return {control::ControlStatus::NOT_FOUND, 0};
 }
 
-control::ControlResponse AudioGraphController::create_track(const std::string& name, int channels)
+control::ControlResponse AudioGraphController::create_track(const std::string& name, int channels, std::optional<int> thread)
 {
     ELKLOG_LOG_DEBUG("create_track called with name {} and {} channels", name, channels);
 
     auto lambda = [=, this] () -> int
     {
-        auto [status, track_id] = _engine->create_track(name, channels);
-        return map_status(status);
+      auto [status, track_id] = _engine->create_track(name, channels, thread);
+      return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
     return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlResponse AudioGraphController::create_multibus_track(const std::string& name, int buses)
+control::ControlResponse AudioGraphController::create_multibus_track(const std::string& name, int buses, std::optional<int> thread)
 {
     ELKLOG_LOG_DEBUG("create_multibus_track called with name {} and {} buses ", name, buses);
     auto lambda = [=, this] () -> int
     {
-        auto [status, track_id] = _engine->create_multibus_track(name, buses);
+        auto [status, track_id] = _engine->create_multibus_track(name, buses, thread);
         return map_status(status);
     };
 
@@ -340,6 +341,7 @@ control::ControlResponse AudioGraphController::create_processor_on_track(const s
                                                                          control::PluginType type,
                                                                          int track_id,
                                                                          std::optional<int> before_processor_id)
+
 {
     ELKLOG_LOG_DEBUG("create_processor_on_track called with name {}, uid {} from {} on track {}",
                                                                     name, uid, file, track_id);

@@ -81,7 +81,7 @@ inline sushi::internal::SyncMode to_internal(const control::SyncMode mode)
     }
 }
 
-inline control::CpuTimings to_external(const sushi::internal::performance::ProcessTimings& timings)
+inline control::Timings to_external(const sushi::internal::performance::ProcessTimings& timings)
 {
     return {.avg = timings.avg_case,
             .min = timings.min_case,

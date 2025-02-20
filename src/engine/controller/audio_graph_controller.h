@@ -60,9 +60,9 @@ public:
 
     control::ControlResponse set_processor_state(int processor_id, const control::ProcessorState& state) override;
 
-    control::ControlResponse create_track(const std::string& name, int channels) override;
+    control::ControlResponse create_track(const std::string& name, int channels, std::optional<int> thread) override;
 
-    control::ControlResponse create_multibus_track(const std::string& name, int buses) override;
+    control::ControlResponse create_multibus_track(const std::string& name, int buses, std::optional<int> thread) override;
 
     control::ControlResponse create_pre_track(const std::string& name) override;
 

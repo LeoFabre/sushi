@@ -128,7 +128,7 @@ TEST_F(SessionControllerTest, TestSaveMidiState)
     constexpr MidiChannel MIDI_CH = MidiChannel::CH_10;
     constexpr control::MidiChannel EXT_MIDI_CH = control::MidiChannel::MIDI_CH_10;
 
-    auto [track_status, track_id] = _audio_engine->create_track(TRACK_NAME, 2);
+    auto [track_status, track_id] = _audio_engine->create_track(TRACK_NAME, 2, std::optional<int>());
     ASSERT_EQ(EngineReturnStatus::OK, track_status);
 
     auto [status, proc_id] = _audio_engine->create_processor({.uid = std::string(equalizer_plugin::EqualizerPlugin::static_uid()),
@@ -181,7 +181,7 @@ TEST_F(SessionControllerTest, TestSaveEngineState)
 {
     std::string TRACK_NAME = "track_1";
 
-    auto [track_status, track_id] = _audio_engine->create_track(TRACK_NAME, 2);
+    auto [track_status, track_id] = _audio_engine->create_track(TRACK_NAME, 2, std::optional<int>());
     ASSERT_EQ(EngineReturnStatus::OK, track_status);
 
     _audio_engine->set_audio_channels(8, 6);
@@ -230,7 +230,7 @@ TEST_F(SessionControllerTest, TestSaveTracks)
     std::string TRACK_NAME = "track_1";
     std::string PROCESSOR_NAME = "processor_1";
 
-    auto [track_status, track_id] = _audio_engine->create_track(TRACK_NAME, 2);
+    auto [track_status, track_id] = _audio_engine->create_track(TRACK_NAME, 2, std::optional<int>());
     ASSERT_EQ(EngineReturnStatus::OK, track_status);
 
     auto [status, proc_id] = _audio_engine->create_processor({.uid = std::string(equalizer_plugin::EqualizerPlugin::static_uid()),
@@ -273,7 +273,7 @@ TEST_F(SessionControllerTest, TestSaveAndRestore)
     constexpr int CC_ID = 15;
     constexpr MidiChannel MIDI_CH = MidiChannel::CH_10;
 
-    auto [track_status, track_id] = _audio_engine->create_track(TRACK_NAME, 2);
+    auto [track_status, track_id] = _audio_engine->create_track(TRACK_NAME, 2, std::optional<int>());
     ASSERT_EQ(EngineReturnStatus::OK, track_status);
 
     auto [status, proc_id] = _audio_engine->create_processor({.uid = std::string(equalizer_plugin::EqualizerPlugin::static_uid()),

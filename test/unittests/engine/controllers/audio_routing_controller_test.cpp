@@ -26,7 +26,7 @@ protected:
 
         _audio_engine->set_audio_channels(8, 8);
 
-        _audio_engine->create_track("Track 1", 2);
+        _audio_engine->create_track("Track 1", 2, std::optional<int>());
         _track_id = _audio_engine->processor_container()->track("Track 1")->id();
     }
 

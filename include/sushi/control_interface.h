@@ -79,11 +79,17 @@ struct TimeSignature
     int denominator;
 };
 
-struct CpuTimings
+struct Timings
 {
     float avg;
     float min;
     float max;
+};
+
+struct CpuTimings
+{
+    Timings main;
+    std::vector<Timings> threads;
 };
 
 enum class PluginType
@@ -149,6 +155,7 @@ struct TrackInfo
     std::string name;
     int         channels;
     int         buses;
+    int         thread;
     TrackType   type;
     std::vector<int> processors;
 };
@@ -361,6 +368,7 @@ struct TrackState
     std::string     label;
     int             channels;
     int             buses;
+    int             thread;
     TrackType       type;
     ProcessorState  track_state;
     std::vector<PluginClass>    processors;
@@ -419,11 +427,12 @@ public:
     virtual void                                    set_timing_statistics_enabled(bool enabled) = 0;
 
     [[nodiscard]] virtual std::pair<ControlStatus, CpuTimings> get_engine_timings() const = 0;
-    [[nodiscard]] virtual std::pair<ControlStatus, CpuTimings> get_track_timings(int track_id) const = 0;
-    [[nodiscard]] virtual std::pair<ControlStatus, CpuTimings> get_processor_timings(int processor_id) const = 0;
-    virtual ControlStatus                                      reset_all_timings() = 0;
-    virtual ControlStatus                                      reset_track_timings(int track_id) = 0;
-    virtual ControlStatus                                      reset_processor_timings(int processor_id) = 0;
+    [[nodiscard]] virtual std::pair<ControlStatus, Timings>    get_track_timings(int track_id) const = 0;
+    [[nodiscard]] virtual std::pair<ControlStatus, Timings>    get_processor_timings(int processor_id) const = 0;
+
+    virtual ControlStatus      reset_all_timings() = 0;
+    virtual ControlStatus      reset_track_timings(int track_id) = 0;
+    virtual ControlStatus      reset_processor_timings(int processor_id) = 0;
 
 protected:
     TimingController() = default;
@@ -463,8 +472,8 @@ public:
     virtual ControlResponse set_processor_bypass_state(int processor_id, bool bypass_enabled) = 0;
     virtual ControlResponse set_processor_state(int processor_id, const ProcessorState& state) = 0;
 
-    virtual ControlResponse create_track(const std::string& name, int channels) = 0;
-    virtual ControlResponse create_multibus_track(const std::string& name, int buses) = 0;
+    virtual ControlResponse create_track(const std::string& name, int channels, std::optional<int> thread) = 0;
+    virtual ControlResponse create_multibus_track(const std::string& name, int buses, std::optional<int> thread) = 0;
     virtual ControlResponse create_pre_track(const std::string& name) = 0;
     virtual ControlResponse create_post_track(const std::string& name) = 0;
     virtual ControlResponse move_processor_on_track(int processor_id, int source_track_id, int dest_track_id, std::optional<int> before_processor_id) = 0;

@@ -305,7 +305,17 @@ void Controller::set_osc_frontend(control_frontend::OSCFrontend* osc_frontend)
 
 void Controller::_notify_timing_listeners(const EngineTimingNotificationEvent* event) const
 {
-    control::CpuTimingNotification notification(to_external(event->timings()), event->time());
+    control::CpuTimings ext;
+    ext.main = to_external(event->main_timings());
+    ext.threads.reserve(event->thread_timings().size());
+
+    for (const auto& thread : event->thread_timings())
+    {
+        ext.threads.push_back(to_external(thread));
+    }
+
+    control::CpuTimingNotification notification(std::move(ext), event->time());
+
     for (auto& listener : _cpu_timing_update_listeners)
     {
         listener->notification(&notification);
