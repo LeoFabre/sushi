@@ -773,6 +773,14 @@ grpc::Status SystemControlService::GetSushiVersion(grpc::ServerContext* /*contex
     return grpc::Status::OK;
 }
 
+grpc::Status SystemControlService::GetSushiApiVersion(grpc::ServerContext* /*context*/,
+                                                      const sushi_rpc::GenericVoidValue* /*request*/,
+                                                      sushi_rpc::GenericStringValue* response)
+{
+    response->set_value(_controller->get_sushi_api_version());
+    return grpc::Status::OK;
+}
+
 grpc::Status SystemControlService::GetBuildInfo(grpc::ServerContext* /*context*/,
                                                 const sushi_rpc::GenericVoidValue* /*request*/,
                                                 sushi_rpc::SushiBuildInfo* response)
@@ -797,7 +805,6 @@ grpc::Status SystemControlService::GetOutputAudioChannelCount(grpc::ServerContex
     response->set_value(_controller->get_output_audio_channel_count());
     return grpc::Status::OK;
 }
-
 
 grpc::Status TransportControlService::GetSamplerate(grpc::ServerContext* /*context*/,
                                                     const sushi_rpc::GenericVoidValue* /*request*/,

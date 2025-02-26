@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 Elk Audio AB
+ * Copyright 2017-2025 Elk Audio AB
  *
  * SUSHI is free software: you can redistribute it and/or modify it under the terms of
  * the GNU Affero General Public License as published by the Free Software Foundation,
@@ -15,7 +15,7 @@
 
 /**
  * @brief Implementation of external control interface for sushi.
- * @Copyright 2017-2023 Elk Audio AB, Stockholm
+ * @Copyright 2017-2025 Elk Audio AB, Stockholm
  */
 
 #ifndef SUSHI_SYSTEM_CONTROLLER_H
@@ -34,6 +34,8 @@ public:
     ~SystemController() override = default;
 
     std::string get_sushi_version() const override;
+
+    std::string get_sushi_api_version() const override;
 
     control::SushiBuildInfo get_sushi_build_info() const override;
 

@@ -78,6 +78,8 @@ class SystemControllerMockup : public SystemController, public TestableControlle
 public:
     std::string get_sushi_version() const override {return "";}
 
+    std::string get_sushi_api_version() const override {return "";}
+
     SushiBuildInfo get_sushi_build_info() const override {return SushiBuildInfo();}
 
     int get_input_audio_channel_count() const override {return 0;}

@@ -37,6 +37,8 @@ struct CompileTimeSettings
 {
     static constexpr auto sushi_version = SUSHI_STRINGIZE(SUSHI__VERSION_MAJ) "." SUSHI_STRINGIZE(SUSHI__VERSION_MIN) "." SUSHI_STRINGIZE(SUSHI__VERSION_REV);
 
+    static constexpr auto sushi_api_version = SUSHI_EXTERNAL_API_VERSION;
+
     static constexpr auto git_commit_hash = SUSHI_GIT_COMMIT_HASH;
 
     static constexpr auto build_timestamp = SUSHI_BUILD_TIMESTAMP;

@@ -390,6 +390,7 @@ public:
     virtual ~SystemController() = default;
 
     [[nodiscard]] virtual std::string    get_sushi_version() const = 0;
+    [[nodiscard]] virtual std::string    get_sushi_api_version() const = 0;
     [[nodiscard]] virtual SushiBuildInfo get_sushi_build_info() const = 0;
     [[nodiscard]] virtual int            get_input_audio_channel_count() const = 0;
     [[nodiscard]] virtual int            get_output_audio_channel_count() const = 0;

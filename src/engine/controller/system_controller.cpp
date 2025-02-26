@@ -43,6 +43,11 @@ std::string SystemController::get_sushi_version() const
     return {CompileTimeSettings::sushi_version};
 }
 
+std::string SystemController::get_sushi_api_version() const
+{
+    return {CompileTimeSettings::sushi_api_version};
+}
+
 control::SushiBuildInfo SystemController::get_sushi_build_info() const
 {
     return _build_info;
