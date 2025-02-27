@@ -21,6 +21,7 @@
 #include "elklog/static_logger.h"
 
 #include "audio_routing_controller.h"
+#include "controller_common.h"
 
 ELKLOG_GET_LOGGER_WITH_MODULE_NAME("controller");
 
@@ -29,10 +30,9 @@ namespace sushi::internal::engine::controller_impl {
 inline control::AudioConnection to_external(const AudioConnection& con)
 {
     return control::AudioConnection{.track_id = static_cast<int>(con.track),
-                                .track_channel = con.track_channel,
-                                .engine_channel = con.engine_channel};
+                                    .track_channel = con.track_channel,
+                                    .engine_channel = con.engine_channel};
 }
-
 
 std::vector<control::AudioConnection> AudioRoutingController::get_all_input_connections() const
 {
@@ -60,37 +60,53 @@ std::vector<control::AudioConnection> AudioRoutingController::get_all_output_con
     return returns;
 }
 
-std::vector<control::AudioConnection> AudioRoutingController::get_input_connections_for_track(int track_id) const
+std::pair<control::ControlStatus, std::vector<control::AudioConnection>> AudioRoutingController::get_input_connections_for_track(int track_id) const
 {
     ELKLOG_LOG_DEBUG("get_input_connections_for_track called with track id {}", track_id);
+    std::pair<control::ControlStatus, std::vector<control::AudioConnection>> returns;
+    returns.first = control::ControlStatus::OK;
+
+    if (!_engine->processor_container()->processor_exists(track_id))
+    {
+        returns.first = control::ControlStatus::NOT_FOUND;
+        return returns;
+    }
+
     auto connections = _engine->audio_input_connections();
-    std::vector<control::AudioConnection> returns;
     for (const auto& connection : connections)
     {
         if (connection.track == static_cast<ObjectId>(track_id))
         {
-            returns.push_back(to_external(connection));
+            returns.second.push_back(to_external(connection));
         }
     }
     return returns;
 }
 
-std::vector<control::AudioConnection> AudioRoutingController::get_output_connections_for_track(int track_id) const
+std::pair<control::ControlStatus, std::vector<control::AudioConnection>> AudioRoutingController::get_output_connections_for_track(int track_id) const
 {
     ELKLOG_LOG_DEBUG("get_output_connections_for_track called with track id {}", track_id);
+    std::pair<control::ControlStatus, std::vector<control::AudioConnection>> returns;
+    returns.first = control::ControlStatus::OK;
+
+    if (!_engine->processor_container()->processor_exists(track_id))
+    {
+        returns.first = control::ControlStatus::NOT_FOUND;
+        return returns;
+    }
+
     auto connections = _engine->audio_output_connections();
-    std::vector<control::AudioConnection> returns;
     for (const auto& connection : connections)
     {
         if (connection.track == static_cast<ObjectId>(track_id))
         {
-            returns.push_back(to_external(connection));
+            returns.second.push_back(to_external(connection));
         }
     }
     return returns;
 }
 
-control::ControlStatus AudioRoutingController::connect_input_channel_to_track(int track_id, int track_channel, int input_channel)
+control::ControlResponse AudioRoutingController::connect_input_channel_to_track(int track_id, int track_channel, int input_channel)
 {
     ELKLOG_LOG_DEBUG("disconnect_output called with track id {}, track_channel {}, input_channel {}", track_id, track_channel, input_channel);
     auto lambda = [=, this] () -> int
@@ -99,15 +115,14 @@ control::ControlStatus AudioRoutingController::connect_input_channel_to_track(in
         ELKLOG_LOG_ERROR_IF(status != EngineReturnStatus::OK, "Connecting audio channel {} to channel {} of track id {} failed with error {}",
                 input_channel, track_channel, track_id, static_cast<int>(status))
 
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioRoutingController::connect_output_channel_to_track(int track_id, int track_channel, int output_channel)
+control::ControlResponse AudioRoutingController::connect_output_channel_to_track(int track_id, int track_channel, int output_channel)
 {
     ELKLOG_LOG_DEBUG("connect_output called with track id {}, track_channel {}, output_channel {}", track_id, track_channel, output_channel);
     auto lambda = [=, this] () -> int
@@ -116,15 +131,14 @@ control::ControlStatus AudioRoutingController::connect_output_channel_to_track(i
         ELKLOG_LOG_ERROR_IF(status != EngineReturnStatus::OK, "Connecting audio channel {} from channel {} of track id {} failed with error {}",
                            output_channel, track_channel, track_id, static_cast<int>(status))
 
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioRoutingController::disconnect_input(int track_id, int track_channel, int input_channel)
+control::ControlResponse AudioRoutingController::disconnect_input(int track_id, int track_channel, int input_channel)
 {
     ELKLOG_LOG_DEBUG("disconnect_input called with track id {}, track_channel {}, input_channel {}", track_id, track_channel, input_channel);
     auto lambda = [=, this] () -> int
@@ -133,15 +147,14 @@ control::ControlStatus AudioRoutingController::disconnect_input(int track_id, in
         ELKLOG_LOG_ERROR_IF(status != EngineReturnStatus::OK, "Disconnecting audio channel {} to channel {} of track id {} failed with error {}",
                            input_channel, track_channel, track_id, static_cast<int>(status))
 
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioRoutingController::disconnect_output(int track_id, int track_channel, int output_channel)
+control::ControlResponse AudioRoutingController::disconnect_output(int track_id, int track_channel, int output_channel)
 {
     ELKLOG_LOG_DEBUG("disconnect_output called with track id {}, track_channel {}, output_channel {}", track_id, track_channel, output_channel);
     auto lambda = [=, this] () -> int
@@ -150,21 +163,19 @@ control::ControlStatus AudioRoutingController::disconnect_output(int track_id, i
         ELKLOG_LOG_ERROR_IF(status != EngineReturnStatus::OK, "Disconnecting audio channel {} from channel {} of track id {} failed with error {}",
                            output_channel, track_channel, track_id, static_cast<int>(status))
 
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioRoutingController::disconnect_all_inputs_from_track(int track_id)
+control::ControlResponse AudioRoutingController::disconnect_all_inputs_from_track(int track_id)
 {
     ELKLOG_LOG_DEBUG("disconnect_all_inputs_from_track called with track {}", track_id);
     auto lambda = [=, this] () -> int
     {
         auto connections = _engine->audio_input_connections();
-        int return_status = EventStatus::HANDLED_OK;
         for (const auto& connection : connections)
         {
             if (connection.track == static_cast<ObjectId>(track_id))
@@ -175,24 +186,22 @@ control::ControlStatus AudioRoutingController::disconnect_all_inputs_from_track(
                 ELKLOG_LOG_ERROR_IF(status != EngineReturnStatus::OK, "Disconnecting audio channel {} from channel {} of track id {} failed with error {}",
                                    connection.engine_channel, connection.track_channel, connection.track, static_cast<int>(status))
 
-                return_status = status == EngineReturnStatus::OK ? return_status : EventStatus::ERROR;
+                return map_status(status);
             }
         }
-        return return_status;
+        return EventStatus::HANDLED_OK;
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioRoutingController::disconnect_all_outputs_from_track(int track_id)
+control::ControlResponse AudioRoutingController::disconnect_all_outputs_from_track(int track_id)
 {
     ELKLOG_LOG_DEBUG("disconnect_all_outputs_from_track called with track {}", track_id);
     auto lambda = [=, this] () -> int
     {
         auto connections = _engine->audio_output_connections();
-        int return_status = EventStatus::HANDLED_OK;
         for (const auto& connection : connections)
         {
             if (connection.track == static_cast<ObjectId>(track_id))
@@ -202,15 +211,18 @@ control::ControlStatus AudioRoutingController::disconnect_all_outputs_from_track
                                                                        connection.track);
                 ELKLOG_LOG_ERROR_IF(status != EngineReturnStatus::OK, "Disconnecting audio channel {} from channel {} of track id {} failed with error {}",
                                    connection.engine_channel, connection.track_channel, connection.track, static_cast<int>(status))
-                return_status = status == EngineReturnStatus::OK ? return_status : EventStatus::ERROR;
+
+                if (status != EngineReturnStatus::OK)
+                {
+                    return map_status(status);
+                }
             }
         }
-        return return_status;
+        return EventStatus::HANDLED_OK;
     };
     
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
 } // end namespace sushi::engine::controller_impl

@@ -21,6 +21,7 @@
 #include "sushi/control_notifications.h"
 #include "sushi/control_interface.h"
 
+#include "completion_sender.h"
 #include "engine/base_event_dispatcher.h"
 #include "engine/transport.h"
 #include "library/base_performance_timer.h"
@@ -61,7 +62,7 @@ namespace engine {
 
 class BaseEngine;
 
-class Controller : public control::SushiControl, EventPoster
+class Controller : public control::SushiControl, EventPoster, CompletionSender
 {
 public:
     Controller(engine::BaseEngine* engine,
@@ -79,6 +80,8 @@ public:
     static void completion_callback(void* arg, Event* event, int status);
 
     void set_osc_frontend(control_frontend::OSCFrontend* osc_frontend);
+
+    int send_with_completion_notification(std::unique_ptr<Event> event) override;
 
 private:
     void _completion_callback(Event* event, int status);
@@ -101,12 +104,15 @@ private:
 
     void _notify_timing_listeners(const EngineTimingNotificationEvent* event) const;
 
+    void _notify_command_completion_listeners(const Event* event, control::ControlStatus status) const;
+
     std::vector<control::ControlListener*>      _parameter_change_listeners;
     std::vector<control::ControlListener*>      _property_change_listeners;
     std::vector<control::ControlListener*>      _processor_update_listeners;
     std::vector<control::ControlListener*>      _track_update_listeners;
     std::vector<control::ControlListener*>      _transport_update_listeners;
     std::vector<control::ControlListener*>      _cpu_timing_update_listeners;
+    std::vector<control::ControlListener*>      _command_completion_listeners;
 
     const engine::BaseProcessorContainer*   _processors;
 

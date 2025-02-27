@@ -22,8 +22,14 @@
 #define SUSHI_CONTROLLER_COMMON_H
 
 #include "sushi/control_interface.h"
-
+#include "completion_sender.h"
 #include "library/base_performance_timer.h"
+
+struct CompletionData
+{
+    sushi::internal::EventCompletionCallback callback;
+    void* data;
+};
 
 namespace sushi::internal::engine::controller_impl {
 
@@ -209,6 +215,31 @@ inline void to_external(control::ProcessorState* dest, sushi::internal::Processo
     }
     // Note, binary data is be moved instead of copied, don't access src->binary_data() afterwards
     dest->binary_data = std::move(src->binary_data());
+}
+
+inline ControlEventStatus map_status(EngineReturnStatus status)
+{
+    switch (status)
+    {
+        case EngineReturnStatus::OK:
+            return ControlEventStatus::OK;
+
+        case EngineReturnStatus::INVALID_TRACK:
+        case EngineReturnStatus::INVALID_PROCESSOR:
+        case EngineReturnStatus::INVALID_PARAMETER:
+            return ControlEventStatus::NOT_FOUND;
+
+        case EngineReturnStatus::INVALID_CHANNEL:
+            return ControlEventStatus::OUT_OF_RANGE;
+
+        case EngineReturnStatus::INVALID_PLUGIN_TYPE:
+        case EngineReturnStatus::INVALID_PLUGIN_UID:
+        case EngineReturnStatus::INVALID_PLUGIN:
+            return ControlEventStatus::INVALID_ARGUMENTS;
+
+        default:
+            return ControlEventStatus::ERROR;
+    }
 }
 
 } // end namespace sushi::internal::engine::controller_impl

@@ -23,6 +23,7 @@
 
 #include "sushi/control_interface.h"
 
+#include "completion_sender.h"
 #include "engine/base_engine.h"
 #include "engine/base_event_dispatcher.h"
 #include "engine/midi_dispatcher.h"
@@ -33,7 +34,8 @@ class MidiController : public control::MidiController
 {
 public:
     MidiController(BaseEngine* engine,
-                   midi_dispatcher::MidiDispatcher* midi_dispatcher);
+                   midi_dispatcher::MidiDispatcher* midi_dispatcher,
+                   CompletionSender* sender);
 
     ~MidiController() override = default;
 
@@ -59,50 +61,51 @@ public:
 
     control::ControlStatus set_midi_clock_output_enabled(bool enabled, int port) override;
 
-    control::ControlStatus connect_kbd_input_to_track(int track_id,
-                                                      control::MidiChannel channel,
-                                                      int port,
-                                                      bool raw_midi) override;
+    control::ControlResponse connect_kbd_input_to_track(int track_id,
+                                                        control::MidiChannel channel,
+                                                        int port,
+                                                        bool raw_midi) override;
 
-    control::ControlStatus connect_kbd_output_from_track(int track_id,
-                                                         control::MidiChannel channel,
-                                                         int port) override;
+    control::ControlResponse connect_kbd_output_from_track(int track_id,
+                                                           control::MidiChannel channel,
+                                                           int port) override;
 
-    control::ControlStatus connect_cc_to_parameter(int processor_id,
-                                                   int parameter_id,
-                                                   control::MidiChannel channel,
-                                                   int port,
-                                                   int cc_number,
-                                                   float min_range,
-                                                   float max_range,
-                                                   bool relative_mode) override;
+    control::ControlResponse connect_cc_to_parameter(int processor_id,
+                                                     int parameter_id,
+                                                     control::MidiChannel channel,
+                                                     int port,
+                                                     int cc_number,
+                                                     float min_range,
+                                                     float max_range,
+                                                     bool relative_mode) override;
 
-    control::ControlStatus connect_pc_to_processor(int processor_id,
+    control::ControlResponse connect_pc_to_processor(int processor_id,
+                                                     control::MidiChannel channel,
+                                                     int port) override;
+
+    control::ControlResponse disconnect_kbd_input(int track_id,
+                                                  control::MidiChannel channel,
+                                                  int port, bool raw_midi) override;
+
+    control::ControlResponse disconnect_kbd_output(int track_id,
                                                    control::MidiChannel channel,
                                                    int port) override;
 
-    control::ControlStatus disconnect_kbd_input(int track_id,
-                                                control::MidiChannel channel,
-                                                int port, bool raw_midi) override;
+    control::ControlResponse disconnect_cc(int processor_id,
+                                           control::MidiChannel channel,
+                                           int port,
+                                           int cc_number) override;
 
-    control::ControlStatus disconnect_kbd_output(int track_id,
-                                                 control::MidiChannel channel,
-                                                 int port) override;
+    control::ControlResponse disconnect_pc(int processor_id, control::MidiChannel channel, int port) override;
 
-    control::ControlStatus disconnect_cc(int processor_id,
-                                         control::MidiChannel channel,
-                                         int port,
-                                         int cc_number) override;
+    control::ControlResponse disconnect_all_cc_from_processor(int processor_id) override;
 
-    control::ControlStatus disconnect_pc(int processor_id, control::MidiChannel channel, int port) override;
-
-    control::ControlStatus disconnect_all_cc_from_processor(int processor_id) override;
-
-    control::ControlStatus disconnect_all_pc_from_processor(int processor_id) override;
+    control::ControlResponse disconnect_all_pc_from_processor(int processor_id) override;
 
 private:
     dispatcher::BaseEventDispatcher* _event_dispatcher;
     midi_dispatcher::MidiDispatcher* _midi_dispatcher;
+    CompletionSender*                _sender;
 };
 
 } // end namespace sushi::internal::engine::controller_impl

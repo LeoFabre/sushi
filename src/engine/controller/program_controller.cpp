@@ -26,9 +26,9 @@ ELKLOG_GET_LOGGER_WITH_MODULE_NAME("controller");
 
 namespace sushi::internal::engine::controller_impl {
 
-ProgramController::ProgramController(BaseEngine* engine) : /* _engine(engine), */
-                                                           _event_dispatcher(engine->event_dispatcher()),
-                                                           _processors(engine->processor_container())
+ProgramController::ProgramController(BaseEngine* engine, CompletionSender* sender) : /* _engine(engine), */
+                                                                                     _processors(engine->processor_container()),
+                                                                                     _sender(sender)
 {}
 
 std::pair<control::ControlStatus, int> ProgramController::get_processor_current_program(int processor_id) const
@@ -101,13 +101,11 @@ std::pair<control::ControlStatus, std::vector<std::string>> ProgramController::g
     return {control::ControlStatus::OUT_OF_RANGE, std::vector<std::string>()};
 }
 
-control::ControlStatus ProgramController::set_processor_program(int processor_id, int program_id)
+control::ControlResponse ProgramController::set_processor_program(int processor_id, int program_id)
 {
     ELKLOG_LOG_DEBUG("set_processor_program called with processor {} and program {}", processor_id, program_id);
-    _event_dispatcher->post_event(std::make_unique<ProgramChangeEvent>(static_cast<ObjectId>(processor_id),
-                                                                                 program_id,
-                                                                                 IMMEDIATE_PROCESS));
-    return control::ControlStatus::OK;
+    auto event = std::make_unique<ProgramChangeEvent>(static_cast<ObjectId>(processor_id), program_id, IMMEDIATE_PROCESS);
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
 } // end namespace sushi::internal::engine::controller_impl

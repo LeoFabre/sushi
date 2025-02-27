@@ -23,6 +23,7 @@
 
 #include "sushi/control_interface.h"
 
+#include "completion_sender.h"
 #include "engine/base_engine.h"
 #include "engine/base_event_dispatcher.h"
 
@@ -31,7 +32,7 @@ namespace sushi::internal::engine::controller_impl {
 class CvGateController : public control::CvGateController
 {
 public:
-    explicit CvGateController([[maybe_unused]] BaseEngine* engine) {}
+    explicit CvGateController([[maybe_unused]] BaseEngine* engine, [[maybe_unused]] CompletionSender* sender) {}
 
     ~CvGateController() override = default;
 
@@ -59,29 +60,29 @@ public:
     std::pair<control::ControlStatus, std::vector<control::GateConnection>>
     get_gate_output_connections_for_processor(int processor_id) const override;
 
-    control::ControlStatus connect_cv_input_to_parameter(int processor_id, int parameter_id, int cv_input_id) override;
+    control::ControlResponse connect_cv_input_to_parameter(int processor_id, int parameter_id, int cv_input_id) override;
 
-    control::ControlStatus connect_cv_output_from_parameter(int processor_id, int parameter_id, int cv_output_id) override;
+    control::ControlResponse connect_cv_output_from_parameter(int processor_id, int parameter_id, int cv_output_id) override;
 
-    control::ControlStatus connect_gate_input_to_processor(int processor_id, int gate_input_id, int channel, int note_no) override;
+    control::ControlResponse connect_gate_input_to_processor(int processor_id, int gate_input_id, int channel, int note_no) override;
 
-    control::ControlStatus connect_gate_output_from_processor(int processor_id, int gate_output_id, int channel, int note_no) override;
+    control::ControlResponse connect_gate_output_from_processor(int processor_id, int gate_output_id, int channel, int note_no) override;
 
-    control::ControlStatus disconnect_cv_input(int processor_id, int parameter_id, int cv_input_id) override;
+    control::ControlResponse disconnect_cv_input(int processor_id, int parameter_id, int cv_input_id) override;
 
-    control::ControlStatus disconnect_cv_output(int processor_id, int parameter_id, int cv_output_id) override;
+    control::ControlResponse disconnect_cv_output(int processor_id, int parameter_id, int cv_output_id) override;
 
-    control::ControlStatus disconnect_gate_input(int processor_id, int gate_input_id, int channel, int note_no) override;
+    control::ControlResponse disconnect_gate_input(int processor_id, int gate_input_id, int channel, int note_no) override;
 
-    control::ControlStatus disconnect_gate_output(int processor_id, int gate_output_id, int channel, int note_no) override;
+    control::ControlResponse disconnect_gate_output(int processor_id, int gate_output_id, int channel, int note_no) override;
 
-    control::ControlStatus disconnect_all_cv_inputs_from_processor(int processor_id) override;
+    control::ControlResponse disconnect_all_cv_inputs_from_processor(int processor_id) override;
 
-    control::ControlStatus disconnect_all_cv_outputs_from_processor(int processor_id) override;
+    control::ControlResponse disconnect_all_cv_outputs_from_processor(int processor_id) override;
 
-    control::ControlStatus disconnect_all_gate_inputs_from_processor(int processor_id) override;
+    control::ControlResponse disconnect_all_gate_inputs_from_processor(int processor_id) override;
 
-    control::ControlStatus disconnect_all_gate_outputs_from_processor(int processor_id) override;
+    control::ControlResponse disconnect_all_gate_outputs_from_processor(int processor_id) override;
 
 private:
 };

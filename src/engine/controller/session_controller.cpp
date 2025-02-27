@@ -113,12 +113,13 @@ inline void to_external(control::OscState& dest, const control_frontend::OscStat
 
 SessionController::SessionController(BaseEngine* engine,
                                      midi_dispatcher::MidiDispatcher* midi_dispatcher,
-                                     audio_frontend::BaseAudioFrontend* audio_frontend) : _event_dispatcher(engine->event_dispatcher()),
-                                                                                          _engine(engine),
-                                                                                          _midi_dispatcher(midi_dispatcher),
-                                                                                          _audio_frontend(audio_frontend),
-                                                                                          _processors(engine->processor_container()),
-                                                                                          _osc_frontend(nullptr)
+                                     audio_frontend::BaseAudioFrontend* audio_frontend,
+                                     CompletionSender* sender) : _sender(sender),
+                                                                 _engine(engine),
+                                                                 _midi_dispatcher(midi_dispatcher),
+                                                                 _audio_frontend(audio_frontend),
+                                                                 _processors(engine->processor_container()),
+                                                                 _osc_frontend(nullptr)
 {}
 
 void SessionController::set_osc_frontend(control_frontend::OSCFrontend* osc_frontend)
@@ -142,12 +143,12 @@ control::SessionState SessionController::save_session() const
     return session;
 }
 
-control::ControlStatus SessionController::restore_session(const control::SessionState& state)
+control::ControlResponse SessionController::restore_session(const control::SessionState& state)
 {
     ELKLOG_LOG_DEBUG("restore_session called");
     if (_check_state(state) == false)
     {
-        return control::ControlStatus::INVALID_ARGUMENTS;
+        return {control::ControlStatus::INVALID_ARGUMENTS, 0};
     }
 
     auto new_session = std::make_unique<control::SessionState>(state);
@@ -178,9 +179,7 @@ control::ControlStatus SessionController::restore_session(const control::Session
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
 control::SushiBuildInfo SessionController::_save_build_info() const

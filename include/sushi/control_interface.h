@@ -44,6 +44,7 @@ using Time = std::chrono::microseconds;
 enum class ControlStatus
 {
     OK,
+    ASYNC_RESPONSE,
     ERROR,
     UNSUPPORTED_OPERATION,
     NOT_FOUND,
@@ -64,6 +65,12 @@ enum class SyncMode
     MIDI,
     GATE,
     LINK
+};
+
+struct ControlResponse
+{
+    ControlStatus status;
+    int           id;
 };
 
 struct TimeSignature
@@ -248,7 +255,8 @@ enum class NotificationType
     TRACK_UPDATE,
     PROCESSOR_UPDATE,
     PARAMETER_CHANGE,
-    PROPERTY_CHANGE
+    PROPERTY_CHANGE,
+    ASYNC_COMMAND_COMPLETION
 };
 
 enum class ProcessorAction
@@ -401,7 +409,7 @@ public:
     [[nodiscard]] virtual TimeSignature   get_time_signature() const = 0;
     [[nodiscard]] virtual float           get_tempo() const = 0;
 
-    virtual void                set_sync_mode(SyncMode sync_mode) = 0;
+    virtual ControlStatus       set_sync_mode(SyncMode sync_mode) = 0;
     virtual void                set_playing_mode(PlayingMode playing_mode) = 0;
     virtual ControlStatus       set_tempo(float tempo) = 0;
     virtual ControlStatus       set_time_signature(TimeSignature signature) = 0;
@@ -461,19 +469,19 @@ public:
     [[nodiscard]] virtual std::pair<ControlStatus, bool>                       get_processor_bypass_state(int processor_id) const = 0;
     [[nodiscard]] virtual std::pair<ControlStatus, ProcessorState>             get_processor_state(int processor_id) const = 0;
 
-    virtual ControlStatus set_processor_bypass_state(int processor_id, bool bypass_enabled) = 0;
-    virtual ControlStatus set_processor_state(int processor_id, const ProcessorState& state) = 0;
+    virtual ControlResponse set_processor_bypass_state(int processor_id, bool bypass_enabled) = 0;
+    virtual ControlResponse set_processor_state(int processor_id, const ProcessorState& state) = 0;
 
-    virtual ControlStatus create_track(const std::string& name, int channels, std::optional<int> thread) = 0;
-    virtual ControlStatus create_multibus_track(const std::string& name, int buses, std::optional<int> thread) = 0;
-    virtual ControlStatus create_pre_track(const std::string& name) = 0;
-    virtual ControlStatus create_post_track(const std::string& name) = 0;
-    virtual ControlStatus move_processor_on_track(int processor_id, int source_track_id, int dest_track_id, std::optional<int> before_processor_id) = 0;
-    virtual ControlStatus create_processor_on_track(const std::string& name, const std::string& uid, const std::string& file,
-                                                    PluginType type, int track_id, std::optional<int> before_processor_id) = 0;
+    virtual ControlResponse create_track(const std::string& name, int channels, std::optional<int> thread) = 0;
+    virtual ControlResponse create_multibus_track(const std::string& name, int buses, std::optional<int> thread) = 0;
+    virtual ControlResponse create_pre_track(const std::string& name) = 0;
+    virtual ControlResponse create_post_track(const std::string& name) = 0;
+    virtual ControlResponse move_processor_on_track(int processor_id, int source_track_id, int dest_track_id, std::optional<int> before_processor_id) = 0;
+    virtual ControlResponse create_processor_on_track(const std::string& name, const std::string& uid, const std::string& file,
+                                                      PluginType type, int track_id, std::optional<int> before_processor_id) = 0;
 
-    virtual ControlStatus delete_processor_from_track(int processor_id, int track_id) = 0;
-    virtual ControlStatus delete_track(int track_id) = 0;
+    virtual ControlResponse delete_processor_from_track(int processor_id, int track_id) = 0;
+    virtual ControlResponse delete_track(int track_id) = 0;
 
 protected:
     AudioGraphController() = default;
@@ -489,7 +497,7 @@ public:
     [[nodiscard]] virtual std::pair<ControlStatus, std::string>              get_processor_program_name(int processor_id, int program_id) const = 0;
     [[nodiscard]] virtual std::pair<ControlStatus, std::vector<std::string>> get_processor_programs(int processor_id) const = 0;
 
-    virtual ControlStatus                                       set_processor_program(int processor_id, int program_id)= 0;
+    virtual ControlResponse                                       set_processor_program(int processor_id, int program_id)= 0;
 
 protected:
     ProgramController() = default;
@@ -539,18 +547,18 @@ public:
     [[nodiscard]] virtual bool get_midi_clock_output_enabled(int port) const = 0;
     virtual ControlStatus set_midi_clock_output_enabled(bool enabled, int port) = 0;
 
-    virtual ControlStatus connect_kbd_input_to_track(int track_id, MidiChannel channel, int port, bool raw_midi) = 0;
-    virtual ControlStatus connect_kbd_output_from_track(int track_id, MidiChannel channel, int port) = 0;
-    virtual ControlStatus connect_cc_to_parameter(int processor_id, int parameter_id, MidiChannel channel, int port,
-                                                  int cc_number, float min_range, float max_range, bool relative_mode) = 0;
-    virtual ControlStatus connect_pc_to_processor(int processor_id, MidiChannel channel, int port) = 0;
+    virtual ControlResponse connect_kbd_input_to_track(int track_id, MidiChannel channel, int port, bool raw_midi) = 0;
+    virtual ControlResponse connect_kbd_output_from_track(int track_id, MidiChannel channel, int port) = 0;
+    virtual ControlResponse connect_cc_to_parameter(int processor_id, int parameter_id, MidiChannel channel, int port,
+                                                    int cc_number, float min_range, float max_range, bool relative_mode) = 0;
+    virtual ControlResponse connect_pc_to_processor(int processor_id, MidiChannel channel, int port) = 0;
 
-    virtual ControlStatus disconnect_kbd_input(int track_id, MidiChannel channel, int port, bool raw_midi) = 0;
-    virtual ControlStatus disconnect_kbd_output(int track_id, MidiChannel channel, int port) = 0;
-    virtual ControlStatus disconnect_cc(int processor_id, MidiChannel channel, int port, int cc_number) = 0;
-    virtual ControlStatus disconnect_pc(int processor_id, MidiChannel channel, int port) = 0;
-    virtual ControlStatus disconnect_all_cc_from_processor(int processor_id) = 0;
-    virtual ControlStatus disconnect_all_pc_from_processor(int processor_id) = 0;
+    virtual ControlResponse disconnect_kbd_input(int track_id, MidiChannel channel, int port, bool raw_midi) = 0;
+    virtual ControlResponse disconnect_kbd_output(int track_id, MidiChannel channel, int port) = 0;
+    virtual ControlResponse disconnect_cc(int processor_id, MidiChannel channel, int port, int cc_number) = 0;
+    virtual ControlResponse disconnect_pc(int processor_id, MidiChannel channel, int port) = 0;
+    virtual ControlResponse disconnect_all_cc_from_processor(int processor_id) = 0;
+    virtual ControlResponse disconnect_all_pc_from_processor(int processor_id) = 0;
 
 protected:
     MidiController() = default;
@@ -563,16 +571,16 @@ public:
 
     [[nodiscard]] virtual std::vector<AudioConnection> get_all_input_connections() const = 0;
     [[nodiscard]] virtual std::vector<AudioConnection> get_all_output_connections() const = 0;
-    [[nodiscard]] virtual std::vector<AudioConnection> get_input_connections_for_track(int track_id) const = 0;
-    [[nodiscard]] virtual std::vector<AudioConnection> get_output_connections_for_track(int track_id) const = 0;
+    [[nodiscard]] virtual std::pair<ControlStatus, std::vector<AudioConnection>> get_input_connections_for_track(int track_id) const = 0;
+    [[nodiscard]] virtual std::pair<ControlStatus, std::vector<AudioConnection>> get_output_connections_for_track(int track_id) const = 0;
 
-    virtual ControlStatus                connect_input_channel_to_track(int track_id, int track_channel, int input_channel) = 0;
-    virtual ControlStatus                connect_output_channel_to_track(int track_id, int track_channel, int output_channel) = 0;
+    virtual ControlResponse                connect_input_channel_to_track(int track_id, int track_channel, int input_channel) = 0;
+    virtual ControlResponse                connect_output_channel_to_track(int track_id, int track_channel, int output_channel) = 0;
 
-    virtual ControlStatus                disconnect_input(int track_id, int track_channel, int input_channel) = 0;
-    virtual ControlStatus                disconnect_output(int track_id, int track_channel, int output_channel) = 0;
-    virtual ControlStatus                disconnect_all_inputs_from_track(int track_id) = 0;
-    virtual ControlStatus                disconnect_all_outputs_from_track(int track_id) = 0;
+    virtual ControlResponse                disconnect_input(int track_id, int track_channel, int input_channel) = 0;
+    virtual ControlResponse                disconnect_output(int track_id, int track_channel, int output_channel) = 0;
+    virtual ControlResponse                disconnect_all_inputs_from_track(int track_id) = 0;
+    virtual ControlResponse                disconnect_all_outputs_from_track(int track_id) = 0;
 
 protected:
     AudioRoutingController() = default;
@@ -596,19 +604,19 @@ public:
     [[nodiscard]] virtual std::pair<ControlStatus, std::vector<GateConnection>> get_gate_input_connections_for_processor(int processor_id) const = 0;
     [[nodiscard]] virtual std::pair<ControlStatus, std::vector<GateConnection>> get_gate_output_connections_for_processor(int processor_id) const = 0;
 
-    virtual ControlStatus               connect_cv_input_to_parameter(int processor_id, int parameter_id, int cv_input_id) = 0;
-    virtual ControlStatus               connect_cv_output_from_parameter(int processor_id, int parameter_id, int cv_output_id) = 0;
-    virtual ControlStatus               connect_gate_input_to_processor(int processor_id, int gate_input_id, int channel, int note_no) = 0;
-    virtual ControlStatus               connect_gate_output_from_processor(int processor_id, int gate_output_id, int channel, int note_no) = 0;
+    virtual ControlResponse               connect_cv_input_to_parameter(int processor_id, int parameter_id, int cv_input_id) = 0;
+    virtual ControlResponse               connect_cv_output_from_parameter(int processor_id, int parameter_id, int cv_output_id) = 0;
+    virtual ControlResponse               connect_gate_input_to_processor(int processor_id, int gate_input_id, int channel, int note_no) = 0;
+    virtual ControlResponse               connect_gate_output_from_processor(int processor_id, int gate_output_id, int channel, int note_no) = 0;
 
-    virtual ControlStatus               disconnect_cv_input(int processor_id, int parameter_id, int cv_input_id) = 0;
-    virtual ControlStatus               disconnect_cv_output(int processor_id, int parameter_id, int cv_output_id) = 0;
-    virtual ControlStatus               disconnect_gate_input(int processor_id, int gate_input_id, int channel, int note_no) = 0;
-    virtual ControlStatus               disconnect_gate_output(int processor_id, int gate_output_id, int channel, int note_no) = 0;
-    virtual ControlStatus               disconnect_all_cv_inputs_from_processor(int processor_id) = 0;
-    virtual ControlStatus               disconnect_all_cv_outputs_from_processor(int processor_id) = 0;
-    virtual ControlStatus               disconnect_all_gate_inputs_from_processor(int processor_id) = 0;
-    virtual ControlStatus               disconnect_all_gate_outputs_from_processor(int processor_id) = 0;
+    virtual ControlResponse               disconnect_cv_input(int processor_id, int parameter_id, int cv_input_id) = 0;
+    virtual ControlResponse               disconnect_cv_output(int processor_id, int parameter_id, int cv_output_id) = 0;
+    virtual ControlResponse               disconnect_gate_input(int processor_id, int gate_input_id, int channel, int note_no) = 0;
+    virtual ControlResponse               disconnect_gate_output(int processor_id, int gate_output_id, int channel, int note_no) = 0;
+    virtual ControlResponse               disconnect_all_cv_inputs_from_processor(int processor_id) = 0;
+    virtual ControlResponse               disconnect_all_cv_outputs_from_processor(int processor_id) = 0;
+    virtual ControlResponse               disconnect_all_gate_inputs_from_processor(int processor_id) = 0;
+    virtual ControlResponse               disconnect_all_gate_outputs_from_processor(int processor_id) = 0;
 
 protected:
     CvGateController() = default;
@@ -623,10 +631,10 @@ public:
     [[nodiscard]] virtual int get_send_port() const = 0;
     [[nodiscard]] virtual int get_receive_port() const = 0;
     [[nodiscard]] virtual std::vector<std::string> get_enabled_parameter_outputs() const = 0;
-    virtual ControlStatus enable_output_for_parameter(int processor_id, int parameter_id) = 0;
-    virtual ControlStatus disable_output_for_parameter(int processor_id, int parameter_id) = 0;
-    virtual ControlStatus enable_all_output() = 0;
-    virtual ControlStatus disable_all_output() = 0;
+    virtual ControlResponse enable_output_for_parameter(int processor_id, int parameter_id) = 0;
+    virtual ControlResponse disable_output_for_parameter(int processor_id, int parameter_id) = 0;
+    virtual ControlResponse enable_all_output() = 0;
+    virtual ControlResponse disable_all_output() = 0;
 
 protected:
     OscController() = default;
@@ -638,7 +646,7 @@ public:
     virtual ~SessionController() = default;
 
     [[nodiscard]] virtual SessionState save_session() const = 0;
-    virtual ControlStatus restore_session(const SessionState& state) = 0;
+    virtual ControlResponse restore_session(const SessionState& state) = 0;
 };
 
 class ControlNotification

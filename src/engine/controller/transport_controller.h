@@ -43,7 +43,7 @@ public:
 
     float get_tempo() const override;
 
-    void set_sync_mode(control::SyncMode sync_mode) override;
+    control::ControlStatus set_sync_mode(control::SyncMode sync_mode) override;
 
     void set_playing_mode(control::PlayingMode playing_mode) override;
 

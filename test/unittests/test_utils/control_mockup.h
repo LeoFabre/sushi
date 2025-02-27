@@ -69,6 +69,7 @@ protected:
 
     std::unordered_map<std::string,std::string> _args_from_last_call;
     ControlStatus _return_status{DEFAULT_CONTROL_STATUS};
+    int  _return_id;
     bool _recently_called{false};
 };
 
@@ -97,7 +98,7 @@ public:
 
     float get_tempo() const override {return DEFAULT_TEMPO;}
 
-    void set_sync_mode(SyncMode sync_mode) override
+    ControlStatus set_sync_mode(SyncMode sync_mode) override
     {
         _args_from_last_call.clear();
         switch (sync_mode)
@@ -110,6 +111,7 @@ public:
         }
 
         _recently_called = true;
+        return _return_status;
     };
 
     void set_playing_mode(PlayingMode playing_mode) override
@@ -306,62 +308,57 @@ public:
         return {_return_status, control::ProcessorState()};
     }
 
-    ControlStatus set_processor_bypass_state(int processor_id, bool bypass_enabled) override
+    ControlResponse set_processor_bypass_state(int processor_id, bool bypass_enabled) override
     {
         _args_from_last_call.clear();
         _args_from_last_call["processor id"] = std::to_string(processor_id);
         _args_from_last_call["bypass enabled"] = std::to_string(bypass_enabled);
         _recently_called = true;
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus set_processor_state(int processor_id, const control::ProcessorState& /*state*/) override
+    ControlResponse set_processor_state(int processor_id, const control::ProcessorState& /*state*/) override
     {
         _args_from_last_call.clear();
         _args_from_last_call["processor id"] = std::to_string(processor_id);
         _recently_called = true;
-        return _return_status;
-    }
+        return {_return_status, _return_id};    }
 
-    control::ControlStatus create_track(const std::string& name, int channels, std::optional<int> thread) override
+    ControlResponse create_track(const std::string& name, int channels, std::optional<int> thread) override
     {
         _args_from_last_call.clear();
         _args_from_last_call["name"] = name;
         _args_from_last_call["channels"] = std::to_string(channels);
         _recently_called = true;
-        return _return_status;
-    }
+        return {_return_status, _return_id};    }
 
-    ControlStatus create_multibus_track(const std::string& name, int buses, std::optional<int> thread) override
+    ControlResponse create_multibus_track(const std::string& name, int buses, std::optional<int> thread) override
     {
         _args_from_last_call.clear();
         _args_from_last_call["name"] = name;
         _args_from_last_call["buses"] = std::to_string(buses);
         _recently_called = true;
-        return _return_status;
-    }
+        return {_return_status, _return_id};    }
 
-    ControlStatus create_pre_track(const std::string& name) override
+    ControlResponse create_pre_track(const std::string& name) override
     {
         _args_from_last_call.clear();
         _args_from_last_call["name"] = name;
         _recently_called = true;
-        return _return_status;
-    }
+        return {_return_status, _return_id};    }
 
-    ControlStatus create_post_track(const std::string& name) override
+    ControlResponse create_post_track(const std::string& name) override
     {
         _args_from_last_call.clear();
         _args_from_last_call["name"] = name;
         _recently_called = true;
-        return _return_status;
-    }
+        return {_return_status, _return_id};    }
 
 
-    ControlStatus move_processor_on_track(int processor_id,
-                                          int source_track_id,
-                                          int dest_track_id,
-                                          std::optional<int> before_processor_id) override
+    ControlResponse move_processor_on_track(int processor_id,
+                                            int source_track_id,
+                                            int dest_track_id,
+                                            std::optional<int> before_processor_id) override
     {
         _args_from_last_call.clear();
         _args_from_last_call["processor_id"] = std::to_string(processor_id);
@@ -369,15 +366,14 @@ public:
         _args_from_last_call["dest_track_id"] = std::to_string(dest_track_id);
         _args_from_last_call["before_processor_id"] = std::to_string(before_processor_id.value_or(-1));
         _recently_called = true;
-        return _return_status;
-    }
+        return {_return_status, _return_id};    }
 
-    ControlStatus create_processor_on_track(const std::string& name,
-                                            const std::string& uid,
-                                            const std::string& file,
-                                            PluginType type,
-                                            int track_id,
-                                            std::optional<int> before_processor_id) override
+    ControlResponse create_processor_on_track(const std::string& name,
+                                              const std::string& uid,
+                                              const std::string& file,
+                                              PluginType type,
+                                              int track_id,
+                                              std::optional<int> before_processor_id) override
     {
         _args_from_last_call.clear();
         _args_from_last_call["name"] = name;
@@ -387,25 +383,22 @@ public:
         _args_from_last_call["track_id"] = std::to_string(track_id);
         _args_from_last_call["before_processor_id"] = std::to_string(before_processor_id.value_or(-1));
         _recently_called = true;
-        return _return_status;
-    }
+        return {_return_status, _return_id};    }
 
-    ControlStatus delete_processor_from_track(int processor_id, int track_id) override
+    ControlResponse delete_processor_from_track(int processor_id, int track_id) override
     {
         _args_from_last_call.clear();
         _args_from_last_call["processor_id"] = std::to_string(processor_id);
         _args_from_last_call["track_id"] = std::to_string(track_id);
         _recently_called = true;
-        return _return_status;
-    }
+        return {_return_status, _return_id};    }
 
-    ControlStatus delete_track(int track_id) override
+    ControlResponse delete_track(int track_id) override
     {
         _args_from_last_call.clear();
         _args_from_last_call["track_id"] = std::to_string(track_id);
         _recently_called = true;
-        return _return_status;
-    }
+        return {_return_status, _return_id};    }
 };
 
 class ProgramControllerMockup : public ProgramController, public TestableController
@@ -431,14 +424,13 @@ public:
         return {_return_status, DEFAULT_PROGRAMS};
     }
 
-    ControlStatus set_processor_program(int processor_id, int program_id) override
+    ControlResponse set_processor_program(int processor_id, int program_id) override
     {
         _args_from_last_call.clear();
         _args_from_last_call["processor id"] = std::to_string(processor_id);
         _args_from_last_call["program id"] = std::to_string(program_id);
         _recently_called = true;
-        return _return_status;
-    }
+        return {_return_status, _return_id};    }
 };
 
 class ParameterControllerMockup : public ParameterController, public TestableController
@@ -572,61 +564,61 @@ public:
         return _return_status;
     }
 
-    ControlStatus connect_kbd_input_to_track(int /*track_id*/, MidiChannel /*channel*/, int /*port*/, bool /*raw_midi*/) override
+    ControlResponse connect_kbd_input_to_track(int /*track_id*/, MidiChannel /*channel*/, int /*port*/, bool /*raw_midi*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus connect_kbd_output_from_track(int /*track_id*/, MidiChannel /*channel*/, int /*port*/) override
+    ControlResponse connect_kbd_output_from_track(int /*track_id*/, MidiChannel /*channel*/, int /*port*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus connect_cc_to_parameter(int /*processor_id*/,
-                                          int /*parameter_id*/,
-                                          MidiChannel /*channel*/,
-                                          int /*port*/,
-                                          int /*cc_number*/,
-                                          float /*min_range*/,
-                                          float /*max_range*/,
-                                          bool /*relative_mode*/) override
+    ControlResponse connect_cc_to_parameter(int /*processor_id*/,
+                                           int /*parameter_id*/,
+                                           MidiChannel /*channel*/,
+                                           int /*port*/,
+                                           int /*cc_number*/,
+                                           float /*min_range*/,
+                                           float /*max_range*/,
+                                           bool /*relative_mode*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus connect_pc_to_processor(int /*processor_id*/, MidiChannel /*channel*/, int /*port*/) override
+    ControlResponse connect_pc_to_processor(int /*processor_id*/, MidiChannel /*channel*/, int /*port*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_kbd_input(int /*track_id*/, MidiChannel /*channel*/, int /*port*/, bool /*raw_midi*/) override
+    ControlResponse disconnect_kbd_input(int /*track_id*/, MidiChannel /*channel*/, int /*port*/, bool /*raw_midi*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_kbd_output(int /*track_id*/, MidiChannel /*channel*/, int /*port*/) override
+    ControlResponse disconnect_kbd_output(int /*track_id*/, MidiChannel /*channel*/, int /*port*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_cc(int /*processor_id*/, MidiChannel /*channel*/, int /*port*/, int /*cc_number*/) override
+    ControlResponse disconnect_cc(int /*processor_id*/, MidiChannel /*channel*/, int /*port*/, int /*cc_number*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_pc(int /*processor_id*/, MidiChannel /*channel*/, int /*port*/) override
+    ControlResponse disconnect_pc(int /*processor_id*/, MidiChannel /*channel*/, int /*port*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_all_cc_from_processor(int /*processor_id*/) override
+    ControlResponse disconnect_all_cc_from_processor(int /*processor_id*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_all_pc_from_processor(int /*processor_id*/) override
+    ControlResponse disconnect_all_pc_from_processor(int /*processor_id*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 };
 
@@ -643,44 +635,44 @@ public:
         return std::vector<AudioConnection>();
     }
 
-    std::vector<AudioConnection> get_input_connections_for_track(int /*track_id*/) const override
+    std::pair<ControlStatus, std::vector<AudioConnection>> get_input_connections_for_track(int /*track_id*/) const override
     {
-        return std::vector<AudioConnection>();
+        return {_return_status, std::vector<AudioConnection>()};
     }
 
-    std::vector<AudioConnection> get_output_connections_for_track(int /*track_id*/) const override
+    std::pair<ControlStatus, std::vector<AudioConnection>> get_output_connections_for_track(int /*track_id*/) const override
     {
-        return std::vector<AudioConnection>();
+        return {_return_status, std::vector<AudioConnection>()};
     }
 
-    ControlStatus connect_input_channel_to_track(int /*track_id*/, int /*track_channel*/, int /*input_channel*/) override
+    ControlResponse connect_input_channel_to_track(int /*track_id*/, int /*track_channel*/, int /*input_channel*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus connect_output_channel_to_track(int /*track_id*/, int /*track_channel*/, int /*output_channel*/) override
+    ControlResponse connect_output_channel_to_track(int /*track_id*/, int /*track_channel*/, int /*output_channel*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_input(int /*track_id*/, int /*track_channel*/, int /*input_channel*/) override
+    ControlResponse disconnect_input(int /*track_id*/, int /*track_channel*/, int /*input_channel*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_output(int /*track_id*/, int /*track_channel*/, int /*output_channel*/) override
+    ControlResponse disconnect_output(int /*track_id*/, int /*track_channel*/, int /*output_channel*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_all_inputs_from_track(int /*track_id*/) override
+    ControlResponse disconnect_all_inputs_from_track(int /*track_id*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_all_outputs_from_track(int /*track_id*/) override
+    ControlResponse disconnect_all_outputs_from_track(int /*track_id*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 };
 
@@ -735,64 +727,64 @@ public:
         return {_return_status, std::vector<GateConnection>()};
     }
 
-    ControlStatus connect_cv_input_to_parameter(int /*processor_id*/, int /*parameter_id*/, int /*cv_input_id*/) override
+    ControlResponse connect_cv_input_to_parameter(int /*processor_id*/, int /*parameter_id*/, int /*cv_input_id*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus connect_cv_output_from_parameter(int /*processor_id*/, int /*parameter_id*/, int /*cv_output_id*/) override
+    ControlResponse connect_cv_output_from_parameter(int /*processor_id*/, int /*parameter_id*/, int /*cv_output_id*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus connect_gate_input_to_processor(int /*processor_id*/, int /*gate_input_id*/, int /*channel*/, int /*note_no*/) override
+    ControlResponse connect_gate_input_to_processor(int /*processor_id*/, int /*gate_input_id*/, int /*channel*/, int /*note_no*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus connect_gate_output_from_processor(int /*processor_id*/, int /*gate_output_id*/, int /*channel*/, int /*note_no*/) override
+    ControlResponse connect_gate_output_from_processor(int /*processor_id*/, int /*gate_output_id*/, int /*channel*/, int /*note_no*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_cv_input(int /*processor_id*/, int /*parameter_id*/, int /*cv_input_id*/) override
+    ControlResponse disconnect_cv_input(int /*processor_id*/, int /*parameter_id*/, int /*cv_input_id*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_cv_output(int /*processor_id*/, int /*parameter_id*/, int /*cv_output_id*/) override
+    ControlResponse disconnect_cv_output(int /*processor_id*/, int /*parameter_id*/, int /*cv_output_id*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_gate_input(int /*processor_id*/, int /*gate_input_id*/, int /*channel*/, int /*note_no*/) override
+    ControlResponse disconnect_gate_input(int /*processor_id*/, int /*gate_input_id*/, int /*channel*/, int /*note_no*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_gate_output(int /*processor_id*/, int /*gate_output_id*/, int /*channel*/, int /*note_no*/) override
+    ControlResponse disconnect_gate_output(int /*processor_id*/, int /*gate_output_id*/, int /*channel*/, int /*note_no*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_all_cv_inputs_from_processor(int /*processor_id*/) override
+    ControlResponse disconnect_all_cv_inputs_from_processor(int /*processor_id*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_all_cv_outputs_from_processor(int /*processor_id*/) override
+    ControlResponse disconnect_all_cv_outputs_from_processor(int /*processor_id*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_all_gate_inputs_from_processor(int /*processor_id*/) override
+    ControlResponse disconnect_all_gate_inputs_from_processor(int /*processor_id*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disconnect_all_gate_outputs_from_processor(int /*processor_id*/) override
+    ControlResponse disconnect_all_gate_outputs_from_processor(int /*processor_id*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 };
 
@@ -810,24 +802,24 @@ public:
         return std::vector<std::string>();
     }
 
-    ControlStatus enable_output_for_parameter(int /*processor_id*/, int /*parameter_id*/) override
+    ControlResponse enable_output_for_parameter(int /*processor_id*/, int /*parameter_id*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disable_output_for_parameter(int /*processor_id*/, int /*parameter_id*/) override
+    ControlResponse disable_output_for_parameter(int /*processor_id*/, int /*parameter_id*/) override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus enable_all_output() override
+    ControlResponse enable_all_output() override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 
-    ControlStatus disable_all_output() override
+    ControlResponse disable_all_output() override
     {
-        return _return_status;
+        return {_return_status, _return_id};
     }
 };
 
@@ -839,9 +831,9 @@ public:
         return SessionState();
     }
 
-    control::ControlStatus restore_session(const control::SessionState& /*state*/) override
+    control::ControlResponse restore_session(const control::SessionState& /*state*/) override
     {
-        return ControlStatus::UNSUPPORTED_OPERATION;
+        return {ControlStatus::UNSUPPORTED_OPERATION, 0};
     }
 };
 

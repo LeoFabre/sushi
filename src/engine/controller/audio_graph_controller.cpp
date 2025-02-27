@@ -15,13 +15,13 @@
 
 /**
  * @brief Implementation of external control interface for sushi.
- * @Copyright 2017-2023 Elk Audio AB, Stockholm
+ * @Copyright 2017-2025 Elk Audio AB, Stockholm
  */
 
 #include "elklog/static_logger.h"
 
 #include "audio_graph_controller.h"
-
+#include "completion_sender.h"
 #include "library/processor_state.h"
 
 ELKLOG_GET_LOGGER_WITH_MODULE_NAME("controller");
@@ -31,27 +31,28 @@ namespace sushi::internal::engine::controller_impl {
 inline control::ProcessorInfo to_external(const Processor* proc)
 {
     return control::ProcessorInfo{.id = static_cast<int>(proc->id()),
-                              .label = proc->label(),
-                              .name = proc->name(),
-                              .parameter_count = proc->parameter_count(),
-                              .program_count = proc->supports_programs()? proc->program_count() : 0};
+                                  .label = proc->label(),
+                                  .name = proc->name(),
+                                  .parameter_count = proc->parameter_count(),
+                                  .program_count = proc->supports_programs()? proc->program_count() : 0};
 }
 
 inline control::TrackInfo to_external(const Track* track, std::vector<int> proc_ids)
 {
     return control::TrackInfo{.id = static_cast<int>(track->id()),
-                          .label = track->label(),
-                          .name = track->name(),
-                          .channels = track->input_channels(),
-                          .buses = track->buses(),
-                          .thread = track->thread(),
-                          .type = to_external(track->type()),
-                          .processors = std::move(proc_ids)};
+                              .label = track->label(),
+                              .name = track->name(),
+                              .channels = track->input_channels(),
+                              .buses = track->buses(),
+                              .thread = track->thread(),
+                              .type = to_external(track->type()),
+                              .processors = std::move(proc_ids)};
 }
 
-AudioGraphController::AudioGraphController(BaseEngine* engine) : _engine(engine),
-                                                                 _event_dispatcher(engine->event_dispatcher()),
-                                                                 _processors(engine->processor_container())
+AudioGraphController::AudioGraphController(BaseEngine* engine,
+                                           CompletionSender* sender) : _engine(engine),
+                                                                       _processors(engine->processor_container()),
+                                                                       _sender(sender)
 {}
 
 std::vector<control::ProcessorInfo> AudioGraphController::get_all_processors() const
@@ -189,7 +190,7 @@ std::pair<control::ControlStatus, control::ProcessorState> AudioGraphController:
     return {control::ControlStatus::NOT_FOUND, state};
 }
 
-control::ControlStatus AudioGraphController::set_processor_state(int processor_id, const control::ProcessorState& state)
+control::ControlResponse AudioGraphController::set_processor_state(int processor_id, const control::ProcessorState& state)
 {
     ELKLOG_LOG_DEBUG("set_processor_state called with processor id {}", processor_id);
     auto internal_state = std::make_unique<ProcessorState>();
@@ -208,90 +209,84 @@ control::ControlStatus AudioGraphController::set_processor_state(int processor_i
             return EventStatus::HANDLED_OK;
         }
         ELKLOG_LOG_ERROR("Processor {} not found", processor_id);
-        return EventStatus::ERROR;
+        return ControlEventStatus::NOT_FOUND;
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioGraphController::set_processor_bypass_state(int processor_id, bool bypass_enabled)
+control::ControlResponse AudioGraphController::set_processor_bypass_state(int processor_id, bool bypass_enabled)
 {
     ELKLOG_LOG_DEBUG("set_processor_bypass_state called with {} and processor {}", bypass_enabled, processor_id);
     auto processor = _processors->mutable_processor(static_cast<ObjectId>(processor_id));
     if (processor)
     {
         processor->set_bypassed(bypass_enabled);
-        return control::ControlStatus::OK;
+        return {control::ControlStatus::OK, 0};
     }
-    return control::ControlStatus::NOT_FOUND;
+    return {control::ControlStatus::NOT_FOUND, 0};
 }
 
-control::ControlStatus AudioGraphController::create_track(const std::string& name, int channels, std::optional<int> thread)
+control::ControlResponse AudioGraphController::create_track(const std::string& name, int channels, std::optional<int> thread)
 {
     ELKLOG_LOG_DEBUG("create_track called with name {} and {} channels", name, channels);
 
     auto lambda = [=, this] () -> int
     {
-        auto [status, track_id] = _engine->create_track(name, channels, thread);
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+      auto [status, track_id] = _engine->create_track(name, channels, thread);
+      return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioGraphController::create_multibus_track(const std::string& name, int buses, std::optional<int> thread)
+control::ControlResponse AudioGraphController::create_multibus_track(const std::string& name, int buses, std::optional<int> thread)
 {
     ELKLOG_LOG_DEBUG("create_multibus_track called with name {} and {} buses ", name, buses);
     auto lambda = [=, this] () -> int
     {
         auto [status, track_id] = _engine->create_multibus_track(name, buses, thread);
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioGraphController::create_pre_track(const std::string& name)
+control::ControlResponse AudioGraphController::create_pre_track(const std::string& name)
 {
     ELKLOG_LOG_DEBUG("create_pre_track called with name {}", name);
     auto lambda = [=, this] () -> int
     {
         auto [status, track_id] = _engine->create_pre_track(name);
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioGraphController::create_post_track(const std::string& name)
+control::ControlResponse AudioGraphController::create_post_track(const std::string& name)
 {
     ELKLOG_LOG_DEBUG("create_post_track called with name {}", name);
-    auto lambda = [=, this] () -> int
-    {
+    auto lambda = [=, this]() -> int {
         auto [status, track_id] = _engine->create_post_track(name);
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioGraphController::move_processor_on_track(int processor_id,
-                                                                 int source_track_id,
-                                                                 int dest_track_id,
-                                                                 std::optional<int> before_processor_id)
+control::ControlResponse AudioGraphController::move_processor_on_track(int processor_id,
+                                                                       int source_track_id,
+                                                                       int dest_track_id,
+                                                                       std::optional<int> before_processor_id)
 {
     ELKLOG_LOG_DEBUG("move_processor_on_track called with processor id {}, source track id and {} dest track id {}",
-                    processor_id, source_track_id, dest_track_id);
+                     processor_id, source_track_id, dest_track_id);
     auto lambda = [=, this] () -> int
     {
         auto plugin_order = _processors->processors_on_track(source_track_id);
@@ -300,16 +295,16 @@ control::ControlStatus AudioGraphController::move_processor_on_track(int process
             plugin_order.empty())
         {
             // Normally controllers aren't supposed to do this kind of pre-check as is results in
-            // double look ups of Processor and Track objects. But given the amount of work needed to
+            // double look-ups of Processor and Track objects. But given the amount of work needed to
             // restore a failed insertion, this is justified in this case
             ELKLOG_LOG_ERROR("Processor or dest track not found");
-            return EventStatus::ERROR;
+            return ControlEventStatus::NOT_FOUND;
         }
 
         auto status = _engine->remove_plugin_from_track(processor_id, source_track_id);
         if (status != EngineReturnStatus::OK)
         {
-            return EventStatus::HANDLED_OK;
+            return map_status(status);
         }
 
         status = _engine->add_plugin_to_track(processor_id, dest_track_id, before_processor_id);
@@ -337,16 +332,16 @@ control::ControlStatus AudioGraphController::move_processor_on_track(int process
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioGraphController::create_processor_on_track(const std::string& name,
-                                                                   const std::string& uid,
-                                                                   const std::string& file,
-                                                                   control::PluginType type,
-                                                                   int track_id,
-                                                                   std::optional<int> before_processor_id)
+control::ControlResponse AudioGraphController::create_processor_on_track(const std::string& name,
+                                                                         const std::string& uid,
+                                                                         const std::string& file,
+                                                                         control::PluginType type,
+                                                                         int track_id,
+                                                                         std::optional<int> before_processor_id)
+
 {
     ELKLOG_LOG_DEBUG("create_processor_on_track called with name {}, uid {} from {} on track {}",
                                                                     name, uid, file, track_id);
@@ -360,7 +355,7 @@ control::ControlStatus AudioGraphController::create_processor_on_track(const std
         auto [status, plugin_id] = _engine->create_processor(plugin_info, name);
         if (status != EngineReturnStatus::OK)
         {
-            return EventStatus::ERROR;
+            return ControlEventStatus::ERROR;
         }
 
         ELKLOG_LOG_DEBUG("Adding plugin {} to track {}", name, track_id);
@@ -370,16 +365,14 @@ control::ControlStatus AudioGraphController::create_processor_on_track(const std
             ELKLOG_LOG_ERROR("Failed to load plugin {} to track {}, destroying plugin", plugin_id, track_id);
             _engine->delete_plugin(plugin_id);
         }
-
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioGraphController::delete_processor_from_track(int processor_id, int track_id)
+control::ControlResponse AudioGraphController::delete_processor_from_track(int processor_id, int track_id)
 {
     ELKLOG_LOG_DEBUG("delete processor_from_track called with processor id {} and track id {}",
                     processor_id, track_id);
@@ -390,15 +383,14 @@ control::ControlStatus AudioGraphController::delete_processor_from_track(int pro
         {
             status = _engine->delete_plugin(processor_id);
         }
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
-control::ControlStatus AudioGraphController::delete_track(int track_id)
+control::ControlResponse AudioGraphController::delete_track(int track_id)
 {
     ELKLOG_LOG_DEBUG("delete_track called with id {}", track_id);
     auto lambda = [=, this] () -> int
@@ -406,7 +398,7 @@ control::ControlStatus AudioGraphController::delete_track(int track_id)
         auto track = _processors->track(track_id);
         if (track == nullptr)
         {
-            return EventStatus::ERROR;
+            return ControlEventStatus::NOT_FOUND;
         }
         auto processors = _processors->processors_on_track(track_id);
 
@@ -425,12 +417,11 @@ control::ControlStatus AudioGraphController::delete_track(int track_id)
             }
         }
         auto status = _engine->delete_track(track_id);
-        return status == EngineReturnStatus::OK? EventStatus::HANDLED_OK : EventStatus::ERROR;
+        return map_status(status);
     };
 
     std::unique_ptr<Event> event(new LambdaEvent(std::move(lambda), IMMEDIATE_PROCESS));
-    _event_dispatcher->post_event(std::move(event));
-    return control::ControlStatus::OK;
+    return {control::ControlStatus::ASYNC_RESPONSE, _sender->send_with_completion_notification(std::move(event))};
 }
 
 std::vector<int> AudioGraphController::_get_processor_ids(int track_id) const
