@@ -9,6 +9,10 @@ add_subdirectory(lv2_host)
 set(BUILD_SHARED_LIBS OFF)
 set(OSC_LIB_ONLY ON)
 
+# Oscpack and vst3sdk require an older cmake version than what cmake 4 supports
+# This relaxes this requirement and allows those libraries to be configured with cmake
+set(CMAKE_POLICY_VERSION_MINIMUM 3.10)
+
 add_subdirectory(oscpack)
 
 if (MSVC)
@@ -28,6 +32,7 @@ if (${SUSHI_WITH_VST3})
     set(SMTG_ADD_VSTGUI OFF CACHE BOOL "" FORCE)
     set(SMTG_ADD_VST3_HOSTING_SAMPLES OFF CACHE BOOL "" FORCE)
     set(SMTG_RUN_VST_VALIDATOR OFF CACHE BOOL "" FORCE)
+    set(SMTG_CREATE_PLUGIN_LINK OFF CACHE BOOL "" FORCE)
 
     # if cross compiling, switch off the create module info post build step
     if(CMAKE_CROSSCOMPILING)
