@@ -119,6 +119,10 @@ $ make
 
 This might take a while the first time since all the vcpkg dependencies will have to be built first.
 
+**Note:** if using Cmake 4 on MacOS, you might need to set the environment variable SDKROOT to *macosx* in order to build the vcpkg dependencies correctly:
+```
+SDKROOT=macosx cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=../third-party/vcpkg/scripts/buildsystems/vcpkg.cmake ..
+```
 ### Building with vcpkg (Windows)
 Building on Windows is similar to Posix and macOS, with the addition of the triplet configuration.
 To build from a terminal, use the commands below. Vcpkg also integrates nicely with CLion and Visual Studio, though you must manually set the toolchain file for vcpkg integration.
