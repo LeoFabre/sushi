@@ -8,6 +8,8 @@ pipelines:
     - step:
         name: Build sushi + tests
 
+        size: 4x
+
         caches:
           - vcpkg
 
@@ -40,8 +42,8 @@ pipelines:
 
           # Build multiple configuration and run unit tests
           # Build sushi and unit tests with default options and default buffer size (64 samples)
-          - make sushi -j4
-          - make unit_tests -j4
+          - make sushi -j${BUILD_CORES}
+          - make unit_tests -j${BUILD_CORES}
           # Run unit tests with some tests test disabled
           - cd test
           - ./unit_tests --gtest_filter=-TestAudioGraph.TestMultiCoreOperation:TestLv2Wrapper.TestSynchronousStateAndWorkerThreads:TestLv2Wrapper.TestMidiEventInputAndOutput
@@ -49,16 +51,16 @@ pipelines:
 
           # Build with buffers size 32 samples
           - cmake -DSUSHI_AUDIO_BUFFER_SIZE=32 ..
-          - make sushi -j4
-          - make unit_tests -j4
+          - make sushi -j${BUILD_CORES}
+          - make unit_tests -j${BUILD_CORES}
           - cd test
           - ./unit_tests --gtest_filter=-TestAudioGraph.TestMultiCoreOperation:TestLv2Wrapper.TestSynchronousStateAndWorkerThreads:TestLv2Wrapper.TestMidiEventInputAndOutput
           - cd ..
 
           # Build with buffer size 128 samples
           - cmake -DSUSHI_AUDIO_BUFFER_SIZE=128 ..
-          - make sushi -j4
-          - make unit_tests -j4
+          - make sushi -j${BUILD_CORES}
+          - make unit_tests -j${BUILD_CORES}
           - cd test
           - ./unit_tests --gtest_filter=-TestAudioGraph.TestMultiCoreOperation:TestLv2Wrapper.TestSynchronousStateAndWorkerThreads:TestLv2Wrapper.TestMidiEventInputAndOutput
           - cd ..
@@ -71,7 +73,7 @@ pipelines:
           # Build with most options disabled to test compile time configuration
           - cmake -DAUDIO_BUFFER_SIZE=64 -DSUSHI_WITH_VST2=OFF -DSUSHI_WITH_VST3=OFF -DSUSHI_WITH_LV2=OFF -DSUSHI_WITH_LV2_MDA_TESTS=OFF -DSUSHI_WITH_RT_MIDI=ON -DSUSHI_WITH_ALSA_MIDI=OFF -DSUSHI_WITH_PORTAUDIO=OFF ..
           - make sushi -j4
-          - make unit_tests -j4
+          - make unit_tests -j${BUILD_CORES}
           - cd test
           - ./unit_tests --gtest_filter=-TestAudioGraph.TestMultiCoreOperation
           - cd ..
@@ -82,4 +84,4 @@ definitions:
 
   variables:
     - name: BUILD_CORES
-      default: 4
+      default: 8
