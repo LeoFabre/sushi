@@ -314,6 +314,7 @@ std::vector<control::TrackState> SessionController::_save_tracks() const
         state.channels = track->input_channels();
         state.buses = track->buses();
         state.type = to_external(track->type());
+        state.thread = track->thread();
 
         for (const auto& plugin : _processors->processors_on_track(track->id()))
         {

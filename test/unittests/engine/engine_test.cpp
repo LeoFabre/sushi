@@ -260,6 +260,8 @@ TEST_F(TestEngine, TestCreatePreAndPostTracks)
     ASSERT_NE(EngineReturnStatus::OK, status);
 }
 
+#ifndef _MSC_VER
+// Only run this test on platforms where we have twine::WorkerPool with multithreading support
 TEST_F(TestEngine, TestCreateTrackOnThread)
 {
     _module_under_test = std::make_unique<AudioEngine>(SAMPLE_RATE, 2);
@@ -277,6 +279,7 @@ TEST_F(TestEngine, TestCreateTrackOnThread)
     EXPECT_EQ(1, track_1->thread());
     EXPECT_EQ(0, track_2->thread());
 }
+#endif
 
 TEST_F(TestEngine, TestAddAndRemovePlugin)
 {

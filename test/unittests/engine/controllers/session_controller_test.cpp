@@ -230,7 +230,7 @@ TEST_F(SessionControllerTest, TestSaveTracks)
     std::string TRACK_NAME = "track_1";
     std::string PROCESSOR_NAME = "processor_1";
 
-    auto [track_status, track_id] = _audio_engine->create_track(TRACK_NAME, 2, std::optional<int>());
+    auto [track_status, track_id] = _audio_engine->create_track(TRACK_NAME, 2, std::nullopt);
     ASSERT_EQ(EngineReturnStatus::OK, track_status);
 
     auto [status, proc_id] = _audio_engine->create_processor({.uid = std::string(equalizer_plugin::EqualizerPlugin::static_uid()),
@@ -249,6 +249,7 @@ TEST_F(SessionControllerTest, TestSaveTracks)
     EXPECT_EQ("", track.label);
     EXPECT_EQ(2, track.channels);
     EXPECT_EQ(1, track.buses);
+    EXPECT_EQ(0, track.thread);
     // Track has 3 parameters, gain, pan and mute. This is tested more thoroughly in the track tests
     EXPECT_EQ(3u, track.track_state.parameters.size());
 

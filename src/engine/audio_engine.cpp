@@ -854,7 +854,7 @@ EngineReturnStatus AudioEngine::_register_new_track(const std::string& name, std
         return status;
     }
 
-    int max_threads = _audio_graph.threads();
+    int max_threads = std::max(0, _audio_graph.threads());
     /*if (max_threads == 1 && thread.value_or(0) != 0) // TODO - maybe redundant case
     {
         ELKLOG_LOG_INFO("Track was set to run on thread {}, but sushi is running in single core mode", thread.value_or(0));
