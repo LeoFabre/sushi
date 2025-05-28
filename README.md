@@ -130,7 +130,7 @@ To build from a terminal, use the commands below. Vcpkg also integrates nicely w
 ````
 $ mkdir build ; cd build
 $ ../third-party/vcpkg/bootstrap-vcpkg.bat
-$ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="../third-party/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_OVERLAY_TRIPLETS="../triplets/" -DVCPKG_TARGET_TRIPLET=win-custom-x86_64 ..
+$ cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="../third-party/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_OVERLAY_TRIPLETS="../triplets/" -DVCPKG_TARGET_TRIPLET=win-custom-x86-64 ..
 $ cmake --build ./ --config Release
 ````
 
