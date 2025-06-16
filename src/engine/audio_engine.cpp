@@ -1335,6 +1335,7 @@ void AudioEngine::print_timings_to_file(const std::string& filename)
 {
     std::fstream file;
     file.open(filename, std::ios_base::out);
+
     if (!file.is_open())
     {
         ELKLOG_LOG_WARNING("Couldn't write timings to file");
@@ -1361,6 +1362,35 @@ void AudioEngine::print_timings_to_file(const std::string& filename)
     file << std::setw(24) << "Engine total";
     print_single_timings_for_node(file, _process_timer, ENGINE_TIMING_ID);
     file.close();
+
+    for (auto id : _process_timer.enabled_detailed_timings())
+    {
+        auto processor = _processors.processor(id);
+        if (processor)
+        {
+            std::string filename = "detailed_timings_" + std::to_string(id) + "_" + processor->name() + "_ns.csv";
+            file.open(filename, std::ios_base::out);
+            for (const auto i : _process_timer.detailed_timings_for_node(id))
+            {
+                file << i.count() << ",";
+            }
+            file.close();
+        }
+    }
+
+
+    auto details = _process_timer.detailed_timings_for_node(DETAILED_TIMING_NODE);
+    if (!details.empty())
+    {
+        std::fstream detailed_file;
+        detailed_file.open("detailed_timings.csv", std::ios_base::out);
+        for (const auto i : details)
+        {
+            detailed_file << i << ",";
+        }
+        detailed_file.close();
+
+    }
 }
 
 void AudioEngine::_route_cv_gate_ins(ControlBuffer& buffer)

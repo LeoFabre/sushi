@@ -30,6 +30,8 @@ constexpr auto EVALUATION_INTERVAL = std::chrono::seconds(1);
 constexpr double SEC_TO_NANOSEC = 1'000'000'000.0;
 constexpr float AVERAGING_FACTOR = 0.5f;
 
+std::vector<TimePoint> empty_vector;
+
 PerformanceTimer::~PerformanceTimer()
 {
     if (_enabled.load() == true)
@@ -79,9 +81,20 @@ void PerformanceTimer::enable(bool enabled)
     }
 }
 
-bool PerformanceTimer::enabled()
+bool PerformanceTimer::enabled() const
 {
     return _enabled;
+}
+
+std::vector<int> PerformanceTimer::enabled_detailed_timings() const
+{
+    std::lock_guard<std::mutex> lock(_timing_lock);
+    std::vector<int> ids;
+    for (const auto& node : _detailed_timings)
+    {
+        ids.push_back(node.first);
+    }
+    return ids;
 }
 
 void PerformanceTimer::_worker()
@@ -108,6 +121,16 @@ void PerformanceTimer::_update_timings()
     {
         int id = node.first;
         std::lock_guard<std::mutex> lock(_timing_lock);
+
+        auto detailed_node = _detailed_timings.find(id);
+        if (detailed_node != _detailed_timings.end())
+        {
+            for (const auto& i : node.second)
+            {
+                detailed_node->second.push_back(i.delta_time);
+            }
+        }
+
         const auto& timings = _timings[id];
         auto new_timings = _calculate_timings(node.second);
         _timings[id].timings = _merge_timings(timings.timings, new_timings);
@@ -169,5 +192,32 @@ void PerformanceTimer::clear_all_timings()
         new (&node.second.timings) (ProcessTimings);
     }
 }
+void PerformanceTimer::enable_detailed_timings(int node_id, bool enabled)
+{
+    std::lock_guard<std::mutex> lock(_timing_lock);
+    if (enabled)
+    {
+        _detailed_timings[node_id] = {};
+    }
+    else
+    {
+        auto node = _detailed_timings.find(node_id);
+        _detailed_timings.erase(node);
+    }
+}
+const std::vector<std::chrono::nanoseconds>& PerformanceTimer::detailed_timings_for_node(int id)
+{
+    std::lock_guard<std::mutex> lock(_timing_lock);
+    auto node = _detailed_timings.find(id);
+    if (node != _detailed_timings.end())
+    {
+        return node->second;
+    }
+    else
+    {
+        return empty_vector;
+    }
+}
+
 
 } // end namespace sushi::internal::performance
