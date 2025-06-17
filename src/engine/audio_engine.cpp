@@ -1377,20 +1377,6 @@ void AudioEngine::print_timings_to_file(const std::string& filename)
             file.close();
         }
     }
-
-
-    auto details = _process_timer.detailed_timings_for_node(DETAILED_TIMING_NODE);
-    if (!details.empty())
-    {
-        std::fstream detailed_file;
-        detailed_file.open("detailed_timings.csv", std::ios_base::out);
-        for (const auto i : details)
-        {
-            detailed_file << i << ",";
-        }
-        detailed_file.close();
-
-    }
 }
 
 void AudioEngine::_route_cv_gate_ins(ControlBuffer& buffer)
