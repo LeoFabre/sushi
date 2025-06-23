@@ -149,6 +149,7 @@ option(SUSHI_SENTRY_DSN "Required Sentry DSN Path" ${SUSHI_SENTRY_DSN_DEFAULT})
 option(SUSHI_DISABLE_MULTICORE_UNIT_TESTS "Disable unit-tests dependent on multi-core processing." ${SUSHI_DISABLE_MULTICORE_UNIT_TESTS_DEFAULT})
 option(SUSHI_BUILD_STANDALONE_APP "Build standalone Sushi executable" ${SUSHI_BUILD_STANDALONE_APP_DEFAULT})
 option(SUSHI_BUILD_WITH_SANITIZERS "Build Sushi with google address sanitizer on" ${SUSHI_BUILD_WITH_SANITIZERS_DEFAULT})
+option(SUSHI_LINK_WITH_PIPEWIRE "Link sushi with pipewire, only use if linking with a rasba build with Pipewire support" OFF)
 
 set(SUSHI_AUDIO_BUFFER_SIZE ${SUSHI_AUDIO_BUFFER_SIZE_DEFAULT} CACHE STRING "Set internal audio buffer size in frames")
 set(SUSHI_RASPA_FLAVOR ${SUSHI_RASPA_FLAVOR_DEFAULT} CACHE STRING "Set raspa flavor. Options are xenomai or evl")
@@ -216,6 +217,10 @@ if (${SUSHI_WITH_RASPA})
             )
     set(EXTRA_BUILD_LIBRARIES ${EXTRA_BUILD_LIBRARIES} ${RASPA_LIB} asound)
     set(EXTRA_COMPILE_DEFINITIONS ${EXTRA_COMPILE_DEFINITIONS} -DSUSHI_BUILD_WITH_RASPA)
+
+    if (${SUSHI_LINK_WITH_PIPEWIRE})
+        set(EXTRA_BUILD_LIBRARIES ${EXTRA_BUILD_LIBRARIES} pipewire-0.3)
+    endif()
 
     if (NOT "$ENV{CMAKE_SYSROOT}" STREQUAL "")
         set(CMAKE_SYSROOT "$ENV{CMAKE_SYSROOT}")
