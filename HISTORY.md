@@ -2,9 +2,17 @@
 New Features:
   * Tracks can be explicitly allocated to threads
   * Send and return plugins are now zero delay under some conditions
+  * Updated vcpkg
+  * Send and return plugins are now zero-delay if on the same cpu core
+  * Updated gRPC api with versioning and command completion notifications
+  * Updated example config files to use initial state instead of events
 
 Fixes:
   * Warning if multiple twine workers are allocated to the same cpu core
+  * Fixes for CMake 4
+  * Updates for deprecated features in C++20
+  * Refactored processor channel config to be less stateful
+  * Fixed issue with VST2 plugins with > 16 channels
 
 
 ## 1.2.0
