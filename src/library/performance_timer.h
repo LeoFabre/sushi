@@ -117,10 +117,23 @@ public:
     void enable(bool enabled) override;
 
     /**
+     * @brief Enable recording of every timing for a particular node
+     * @param node_id The node id to record
+     * @param enabled Enable timings if true, disable if false
+     */
+    void enable_detailed_timings(int node_id, bool enabled) override;
+
+    /**
      * @brief Query the enabled state
      * @return True if the timer is enabled, false otherwise
      */
-    bool enabled() override;
+    bool enabled() const override;
+
+    /**
+     * @brief List all enabled detailed timings
+     * @return A std::list of node ids for which detailed timing is enabled
+     */
+    std::vector<int> enabled_detailed_timings() const override;
 
     /**
      * @brief Get the recorded timings from a specific node
@@ -128,6 +141,13 @@ public:
      * @return A ProcessTimings object populated if the node has any timing records. Empty otherwise
      */
     std::optional<ProcessTimings> timings_for_node(int id) override;
+
+    /**
+     * @brief Get all recorded timings from a specific node
+     * @param id An integer id representing a timing node
+     * @return A vector of all recorded timings if the node has any timing records. Empty otherwise
+     */
+    const std::vector<std::chrono::nanoseconds>& detailed_timings_for_node(int id) override;
 
     /**
      * @brief Clear the recorded timings for a particular node
@@ -165,7 +185,8 @@ protected:
     std::atomic_bool _enabled {false};
 
     std::map<int, TimingNode> _timings;
-    std::mutex _timing_lock;
+    std::map<int, std::vector<TimePoint>> _detailed_timings;
+    mutable std::mutex _timing_lock;
     SpinLock _queue_lock;
     alignas(ASSUMED_CACHE_LINE_SIZE) memory_relaxed_aquire_release::CircularFifo<TimingLogPoint, MAX_LOG_ENTRIES> _entry_queue;
 

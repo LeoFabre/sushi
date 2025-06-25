@@ -59,10 +59,23 @@ public:
     virtual void enable(bool enabled) = 0;
 
     /**
+     * @brief Enable recording of every timing for a particular node
+     * @param node_id The node id to record
+     * @param enabled Enable timings if true, disable if false
+     */
+    virtual void enable_detailed_timings(int node_id, bool enabled) = 0;
+
+    /**
      * @brief Query the enabled state
      * @return True if the timer is enabled, false otherwise
      */
-    virtual bool enabled() = 0;
+    virtual bool enabled() const = 0;
+
+    /**
+     * @brief List all enabled detailed timings
+     * @return A std::list of node ids for which detailed timing is enabled
+     */
+    virtual std::vector<int> enabled_detailed_timings() const = 0;
 
     /**
      * @brief Get the recorded timings from a specific node
@@ -70,6 +83,13 @@ public:
      * @return A ProcessTimings object populated if the node has any timing records. Empty otherwise
      */
     virtual std::optional<ProcessTimings> timings_for_node(int id) = 0;
+
+    /**
+     * @brief Get all recorded timings from a specific node
+     * @param id An integer id representing a timing node
+     * @return A vector of all recorded timings if the node has any timing records. Empty otherwise
+     */
+    virtual const std::vector<std::chrono::nanoseconds>& detailed_timings_for_node(int id) = 0;
 
     /**
      * @brief Clear the recorded timings for a particular node

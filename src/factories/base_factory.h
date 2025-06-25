@@ -86,6 +86,8 @@ protected:
     Status _configure_from_json(SushiOptions& options);
     Status _configure_with_defaults(SushiOptions& options);
 
+    Status _configure_timing_options(const SushiOptions& options);
+
     Status _configure_engine(SushiOptions& options,
                              const jsonconfig::ControlConfig& control_config,
                              jsonconfig::JsonConfigurator* configurator);

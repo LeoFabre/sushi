@@ -26,6 +26,7 @@
 #include <chrono>
 #include <optional>
 #include <filesystem>
+#include <vector>
 
 #include "compile_time_settings.h"
 
@@ -272,6 +273,11 @@ struct SushiOptions
      */
     bool enable_timings = false;
 
+    /**
+     * Log timings for every audio callback on these processors. Results will be written as a csv file on exit.
+     * Only use for debug purposes, may store significant amounts of data.
+     */
+    std::vector<std::string> detailed_timing_log;
     /**
      * Enable flushing the log periodically and specify the interval.
      */

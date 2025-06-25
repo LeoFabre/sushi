@@ -35,6 +35,21 @@ enum class ParseStatus
     EXIT
 };
 
+std::vector<std::string> tokenize_arg(const char* arg, char delimiter)
+{
+    std::vector<std::string> args;
+    auto str_arg = std::string_view(arg);
+    auto pos = str_arg.find(delimiter);
+    while (pos != std::string_view::npos)
+    {
+        args.emplace_back(str_arg.substr(0, pos));
+        str_arg = str_arg.substr(pos + 1, std::string_view::npos);
+        pos = str_arg.find(delimiter);
+    }
+    args.emplace_back(str_arg);
+    return args;
+}
+
 static void print_version_and_build_info()
 {
     std::cout << "\nVersion " << CompileTimeSettings::sushi_version << std::endl;
@@ -200,6 +215,10 @@ static ParseStatus parse_options(int argc, char* argv[], sushi::SushiOptions& op
 
                 case OPT_IDX_TIMINGS_STATISTICS:
                     options.enable_timings = true;
+                    break;
+
+                case OPT_IDX_DETAILED_TIMINGS:
+                    options.detailed_timing_log = tokenize_arg(opt.arg, ';');
                     break;
 
                 case OPT_IDX_OSC_RECEIVE_PORT:
