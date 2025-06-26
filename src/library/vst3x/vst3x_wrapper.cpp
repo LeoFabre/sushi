@@ -19,6 +19,7 @@
  */
 
 #include <string>
+#include <iostream>
 
 
 #include "elk-warning-suppressor/warning_suppressor.hpp"
@@ -96,34 +97,7 @@ ProcessorReturnCode Vst3xWrapper::init(float sample_rate)
     set_name(_instance.name());
     set_label(_instance.name());
 
-    if (!_setup_audio_buses() || !_setup_event_buses())
-    {
-        return ProcessorReturnCode::PLUGIN_INIT_ERROR;
-    }
-    auto res = _instance.controller()->setComponentHandler(&_component_handler);
-    if (res != Steinberg::kResultOk)
-    {
-        ELKLOG_LOG_ERROR("Failed to set component handler with error code: {}", res);
-        return ProcessorReturnCode::PLUGIN_INIT_ERROR;
-    }
-    if (!_sync_processor_to_controller())
-    {
-        ELKLOG_LOG_WARNING("failed to sync controller");
-    }
-
-    if (!_setup_processing())
-    {
-        return ProcessorReturnCode::PLUGIN_INIT_ERROR;
-    }
-    if (!_register_parameters())
-    {
-        return ProcessorReturnCode::PARAMETER_ERROR;
-    }
-    if (!_setup_internal_program_handling())
-    {
-        _setup_file_program_handling();
-    }
-    return ProcessorReturnCode::OK;
+    return _setup();
 }
 
 void Vst3xWrapper::configure(float sample_rate)
@@ -200,6 +174,27 @@ void Vst3xWrapper::process_event(const RtEvent& event)
             {
                 auto typed_event = event.keyboard_common_event();
                 _add_parameter_change(_aftertouch_parameter.id, typed_event->value(), typed_event->sample_offset());
+            }
+            break;
+        }
+        case RtEventType::STRING_PROPERTY_CHANGE:
+        {
+            auto typed_event = event.property_change_event();
+            auto plugin_extension = _instance.processor_extension();
+            if (plugin_extension)
+            {
+                plugin_extension->propertyValueChanged(typed_event->param_id(), {typed_event->value()->c_str(), (int)typed_event->value()->size()});
+            }
+            async_delete(typed_event->deletable_value());
+            break;
+        }
+        case RtEventType::ASYNC_WORK_NOTIFICATION:
+        {
+            auto typed_event = event.async_work_completion_event();
+            auto processor_extension = _instance.processor_extension();
+            if (processor_extension)
+            {
+                processor_extension->asyncWorkCompleted(typed_event->sending_event_id(), typed_event->return_status());
             }
             break;
         }
@@ -368,6 +363,58 @@ int Vst3xWrapper::current_program() const
     return 0;
 }
 
+std::pair<ProcessorReturnCode, std::string> Vst3xWrapper::property_value(ObjectId property_id) const
+{
+    auto controller_ext = const_cast<PluginInstance&>(_instance).controller_extension();
+    if (controller_ext)
+    {
+        elk::PropertyValue value{nullptr ,0};
+        auto res = controller_ext->getPropertyValue(static_cast<Steinberg::int32>(property_id), value);
+        if (res == Steinberg::kResultOk && value.value)
+        {
+            return {ProcessorReturnCode::OK,
+                    std::string(value.value, std::clamp(value.length, 0, elk::STRING_PROPERTY_DEFAULT_LENGTH))};
+        }
+    }
+    return {ProcessorReturnCode::PARAMETER_NOT_FOUND, ""};
+}
+
+ProcessorReturnCode Vst3xWrapper::set_property_value(ObjectId property_id, const std::string& value)
+{
+    auto controller_ext = const_cast<PluginInstance&>(_instance).controller_extension();
+    auto config = _property_configs.find(property_id);
+    if (controller_ext && config != _property_configs.end())
+    {
+        if (!config->second.automatable)
+        {
+            return ProcessorReturnCode::UNSUPPORTED_OPERATION;
+        }
+
+        elk::PropertyValue property_value{const_cast<char*>(value.c_str()),
+                                          std::clamp<int>(value.size(), 0, elk::STRING_PROPERTY_DEFAULT_LENGTH)};
+        auto res = controller_ext->setPropertyValue(static_cast<Steinberg::int32>(property_id), property_value);
+        if (res == Steinberg::kResultOk)
+        {
+            // Non rt thread notification (will be output through OSC, gRPC, etc)
+            _host_control.post_event(std::make_unique<PropertyChangeNotificationEvent>(this->id(),
+                                                                                       property_id,
+                                                                                       value,
+                                                                                       IMMEDIATE_PROCESS));
+            // Audio thread notification
+
+            if (config->second.audio_thread_notification)
+            {
+                _host_control.post_event(std::make_unique<StringPropertyEvent>(this->id(),
+                                                                               property_id,
+                                                                               value,
+                                                                               IMMEDIATE_PROCESS));
+            }
+            return ProcessorReturnCode::OK;
+        }
+    }
+    return ProcessorReturnCode::PARAMETER_NOT_FOUND;
+}
+
 std::string Vst3xWrapper::current_program_name() const
 {
     return program_name(_current_program).second;
@@ -446,9 +493,6 @@ ProcessorReturnCode Vst3xWrapper::set_program(int program)
         event->set_completion_cb(Vst3xWrapper::program_change_callback, this);
         _host_control.post_event(std::move(event));
         ELKLOG_LOG_INFO("Set program {}, {}, {}", program, normalised_program_id, _program_change_parameter.id);
-
-        // TODO: Why is this commented out?
-        //_instance.controller()->setParamNormalized(_program_change_parameter.id, normalised_program_id);
 
         return ProcessorReturnCode::OK;
     }
@@ -562,6 +606,36 @@ PluginInfo Vst3xWrapper::info() const
     return info;
 }
 
+ProcessorReturnCode Vst3xWrapper::_setup()
+{
+    if (!_setup_audio_buses() || !_setup_event_buses())
+    {
+        return ProcessorReturnCode::PLUGIN_INIT_ERROR;
+    }
+    auto res = _instance.controller()->setComponentHandler(&_component_handler);
+    if (res != Steinberg::kResultOk)
+    {
+        ELKLOG_LOG_ERROR("Failed to set component handler with error code: {}", res);
+        return ProcessorReturnCode::PLUGIN_INIT_ERROR;
+    }
+    if (!_sync_processor_to_controller())
+    {
+        ELKLOG_LOG_WARNING("failed to sync controller");
+    }
+
+    if (!_setup_processing())
+    {
+        return ProcessorReturnCode::PLUGIN_INIT_ERROR;
+    }
+    _register_parameters();
+    _register_properties();
+    if (!_setup_internal_program_handling())
+    {
+        _setup_file_program_handling();
+    }
+    return ProcessorReturnCode::OK;
+}
+
 bool Vst3xWrapper::_register_parameters()
 {
     int param_count = _instance.controller()->getParameterCount();
@@ -584,9 +658,10 @@ bool Vst3xWrapper::_register_parameters()
              * wrapper and internal plugins. Hopefully that doesn't cause any issues. */
             auto param_name = to_ascii_str(info.title);
             auto param_unit = to_ascii_str(info.units);
-            bool automatable_bool = info.flags & Steinberg::Vst::ParameterInfo::kCanAutomate;
+            bool automatable = info.flags & Steinberg::Vst::ParameterInfo::kCanAutomate;
+            bool read_only = info.flags & Steinberg::Vst::ParameterInfo::kCanAutomate;
 
-            auto direction = automatable_bool ? Direction::AUTOMATABLE : Direction::OUTPUT;
+            auto direction = (automatable && !read_only) ? Direction::AUTOMATABLE : Direction::OUTPUT;
 
             if (info.flags & Steinberg::Vst::ParameterInfo::kIsBypass)
             {
@@ -672,6 +747,50 @@ bool Vst3xWrapper::_register_parameters()
 
     return true;
 }
+
+bool Vst3xWrapper::_register_properties()
+{
+    /* String parameters/properties are not supported in Vst3, they can only be used if the plugin
+     * implements our extension api. The IDs of these string extension properties must still not
+     * conflict with any existing float parameters */
+    auto controller = _instance.controller_extension();
+    if (!controller)
+    {
+        return false;
+    }
+    for (int i = 0 ; i < controller->getPropertyCount(); ++i)
+    {
+        elk::PropertyInfo info;
+        auto res = controller->getPropertyInfo(i, info);
+        if (res == Steinberg::kResultOk)
+        {
+            auto name = to_ascii_str(info.name);
+            auto label = to_ascii_str(info.label);
+            bool automatable = info.flags & elk::PropertyInfo::kCanAutomate;
+            bool read_only = info.flags & elk::PropertyInfo::kIsReadOnly;
+            bool audio_thread_notification = info.flags & elk::PropertyInfo::kAudioThreadNotify;
+
+            auto direction = (automatable && !read_only) ? Direction::AUTOMATABLE : Direction::OUTPUT;
+
+            auto param = new StringPropertyDescriptor(_make_unique_parameter_name(name), label, "", direction);
+
+            if (!this->register_parameter(param, info.id))
+            {
+                ELKLOG_LOG_WARNING("Failed to register string property \"{}\"", name);
+                delete param;
+                continue;
+            }
+
+            PropertyInfo config = {.automatable = automatable, .audio_thread_notification = audio_thread_notification};
+            _property_configs[info.id] = config;
+
+            _parameters_by_vst3_id[param->id()] = param;
+            ELKLOG_LOG_DEBUG("Registered string property \"{}\"\"", name);
+        }
+    }
+    return true;
+}
+
 
 bool Vst3xWrapper::_setup_audio_buses()
 {
@@ -1062,6 +1181,13 @@ void Vst3xWrapper::_set_state_rt(Vst3xRtState* state)
          * call should be a very rare occasion */
         async_delete(state);
     }
+}
+
+EventId Vst3xWrapper::_request_async_work(AsyncWorkCallback callback, void* data)
+{
+    auto event = RtEvent::make_async_work_event(callback, this->id(), data);
+    output_event(event);
+    return event.async_work_event()->event_id();
 }
 
 Steinberg::Vst::SpeakerArrangement speaker_arr_from_channels(int channels)

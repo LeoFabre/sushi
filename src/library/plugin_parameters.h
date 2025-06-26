@@ -240,7 +240,7 @@ private:
     T _min_domain_value;
     T _max_domain_value;
 
-    bool _automatable {true};
+    bool _automatable;
 };
 
 /* Partial specialization for pointer type parameters */
@@ -250,11 +250,26 @@ class TypedParameterDescriptor<T *, enumerated_type> : public ParameterDescripto
 public:
     TypedParameterDescriptor(const std::string& name,
                              const std::string& label,
-                             const std::string& unit) : ParameterDescriptor(name, label, unit, enumerated_type) {}
+                             const std::string& unit,
+                             Direction automatable = Direction::AUTOMATABLE) :
+                                             ParameterDescriptor(name, label, unit, enumerated_type)
+    {
+        if (automatable == Direction::AUTOMATABLE)
+        {
+            _automatable = true;
+        }
+        else
+        {
+            _automatable = false;
+        }
+    }
 
     ~TypedParameterDescriptor() = default;
 
-    bool automatable() const override {return false;}
+    bool automatable() const override {return _automatable;}
+
+private:
+    bool _automatable;
 };
 
 /* Partial specialization for pointer type parameters */

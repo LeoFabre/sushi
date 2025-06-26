@@ -2,11 +2,15 @@
 
 #include "gtest/gtest.h"
 
+#define TWINE_EXPOSE_INTERNALS 1
+#include <twine/twine.h>
+
 #include "test_utils/test_utils.h"
 #include "library/rt_event_fifo.h"
 #include "library/vst3x/vst3x_utils.cpp"
 #include "test_utils/host_control_mockup.h"
 
+#include "test_utils/vst3_test_plugin.h"
 #include "library/vst3x/vst3x_wrapper.cpp"
 #include "library/vst3x/vst3x_host_app.cpp"
 #include "library/vst3x/vst3x_file_utils.cpp"
@@ -19,6 +23,28 @@ class Vst3xWrapperAccessor
 public:
     explicit Vst3xWrapperAccessor(Vst3xWrapper& f) : _friend(f) {}
 
+    bool inject_plugin(Steinberg::Vst::IComponent* component, const std::string& name, float sample_rate)
+    {
+        _friend._sample_rate = sample_rate;
+        bool loaded = _friend._instance.load_plugin_from_component(component,name);
+        if (!loaded)
+        {
+            std::cout << "Failed to load" << std::endl;
+            _friend._cleanup();
+            return false;
+        }
+        _friend.set_name(_friend._instance.name());
+        _friend.set_label(_friend._instance.name());
+
+        auto res = _friend._setup();
+        if (res != ProcessorReturnCode::OK)
+        {
+            std::cout << "Failed to setup " << (int)res << std::endl;
+            return false;
+        }
+        return true;
+    }
+
     Vst3xWrapper::SpecialParameter& bypass_parameter()
     {
         return _friend._bypass_parameter;
@@ -27,6 +53,11 @@ public:
     SushiProcessData& process_data()
     {
         return _friend._process_data;
+    }
+
+    PluginInstance& instance()
+    {
+        return _friend._instance;
     }
 
     void forward_events(Steinberg::Vst::ProcessData& data)
@@ -145,6 +176,7 @@ protected:
     using ::testing::Test::SetUp; // Hide error of hidden overload of virtual function in clang when signatures differ but the name is the same
     TestVst3xWrapper() = default;
 
+    // Setup function to load an external plugin from file
     void SetUp(const char* plugin_file, const char* plugin_name)
     {
         auto full_path = std::filesystem::path(plugin_file);
@@ -164,11 +196,30 @@ protected:
         _module_under_test->set_channels(TEST_CHANNEL_COUNT, TEST_CHANNEL_COUNT);
     }
 
+    // Setup function to load a plugin from an existing class
+    void SetUp(test_utils::Vst3TestPlugin* plugin)
+    {
+        _module_under_test = std::make_unique<Vst3xWrapper>(_host_control.make_host_control_mockup(TEST_SAMPLE_RATE),
+                                                            "",
+                                                            "test_plugin",
+                                                            &_host_app);
+
+        _accessor = std::make_unique<Vst3xWrapperAccessor>(*_module_under_test);
+
+        ASSERT_TRUE(_accessor->inject_plugin(plugin, "test_plugin", TEST_SAMPLE_RATE));
+
+        _module_under_test->set_enabled(true);
+        _module_under_test->set_event_output(&_event_queue);
+        _module_under_test->set_channels(TEST_CHANNEL_COUNT, TEST_CHANNEL_COUNT);
+    }
+
     SushiHostApplication _host_app;
     HostControlMockup _host_control;
     std::unique_ptr<Vst3xWrapper> _module_under_test;
 
     std::unique_ptr<Vst3xWrapperAccessor> _accessor;
+
+    std::unique_ptr<test_utils::Vst3TestPlugin> _test_plugin;
 
     RtSafeRtEventFifo _event_queue;
 };
@@ -541,6 +592,123 @@ TEST_F(TestVst3xWrapper, TestBinaryStateSaving)
 
     // Check the value has reverted to the previous value
     EXPECT_FLOAT_EQ(prev_value, _module_under_test->parameter_value(desc->id()).second);
+}
+
+TEST_F(TestVst3xWrapper, TestExtensionInterfaceEnumeration)
+{
+    Steinberg::IPtr<test_utils::Vst3TestPlugin> plugin = new test_utils::Vst3TestPlugin();
+    ASSERT_FALSE(plugin->host_app);
+
+    SetUp(plugin.get());
+
+    _module_under_test->set_enabled(true);
+    // Test that the wrapper correctly found the extension interfaces exposed by the plugin
+    ASSERT_TRUE(_module_under_test->enabled());
+    ASSERT_TRUE(_accessor->instance().processor_extension());
+    ASSERT_TRUE(_accessor->instance().controller_extension());
+
+    // Test that the plugin found the host extension interfaces
+    ASSERT_TRUE(plugin->host_app);
+    ASSERT_TRUE(plugin->component_handler);
+    ASSERT_TRUE(plugin->component_handler_extension);
+}
+
+TEST_F(TestVst3xWrapper, TestStringProperties)
+{
+    Steinberg::IPtr<test_utils::Vst3TestPlugin> plugin = new test_utils::Vst3TestPlugin();
+    SetUp(plugin.get());
+    _module_under_test->set_enabled(true);
+
+    ASSERT_TRUE(plugin->component_handler_extension);
+
+    auto parameters = _module_under_test->all_parameters();
+    ASSERT_EQ(3, parameters.size());
+
+    ASSERT_EQ(test_utils::Vst3TestPlugin::PROPERTY_ID_1, parameters[1]->id());
+    ASSERT_EQ(ParameterType::STRING, parameters[1]->type());
+    ASSERT_EQ("property_1", parameters[1]->name());
+    ASSERT_EQ("Property 1", parameters[1]->label());
+
+    ASSERT_EQ(test_utils::Vst3TestPlugin::PROPERTY_ID_2, parameters[2]->id());
+    ASSERT_EQ(ParameterType::STRING, parameters[2]->type());
+    ASSERT_EQ("property_2", parameters[2]->name());
+    ASSERT_EQ("Property 2", parameters[2]->label());
+
+    // Set values
+    auto res = _module_under_test->set_property_value(test_utils::Vst3TestPlugin::PROPERTY_ID_1, "new value");
+    ASSERT_EQ(ProcessorReturnCode::OK, res);
+    // Property 2 is marked as read only
+    res = _module_under_test->set_property_value(test_utils::Vst3TestPlugin::PROPERTY_ID_2, "three");
+    ASSERT_EQ(ProcessorReturnCode::UNSUPPORTED_OPERATION, res);
+    // Pass an invalid id
+    res = _module_under_test->set_property_value(-34, "jsgafupeewn");
+    ASSERT_NE(ProcessorReturnCode::OK, res);
+
+    // Get the new values
+    ASSERT_EQ("new value", _module_under_test->property_value(test_utils::Vst3TestPlugin::PROPERTY_ID_1).second);
+
+    // Check the events that should have been posted by the set request
+    auto event = _host_control._dummy_dispatcher.retrieve_event();
+    ASSERT_TRUE(event);
+    ASSERT_TRUE(event->is_property_change_notification());
+    auto typed_event = static_cast<PropertyChangeNotificationEvent*>(event.get());
+    ASSERT_EQ("new value", typed_event->value());
+    ASSERT_EQ(_module_under_test->id(), typed_event->processor_id());
+    ASSERT_EQ(test_utils::Vst3TestPlugin::PROPERTY_ID_1, typed_event->property_id());
+    // There should be 1 more event
+    event = _host_control._dummy_dispatcher.retrieve_event();
+    ASSERT_TRUE(event);
+    ASSERT_TRUE(event->maps_to_rt_event());
+    auto rt_event = event->to_rt_event(0);
+    ASSERT_EQ(RtEventType::STRING_PROPERTY_CHANGE, rt_event.type());
+    auto typed_rt_event = rt_event.property_change_event();
+    ASSERT_EQ("new value", *typed_rt_event->value());
+    ASSERT_EQ(test_utils::Vst3TestPlugin::PROPERTY_ID_1, typed_rt_event->param_id());
+    ASSERT_EQ(_module_under_test->id(), typed_rt_event->processor_id());
+
+    // clean up manually
+    delete typed_rt_event->deletable_value();
+
+    // Queue should now be empty
+    ASSERT_FALSE(_host_control._dummy_dispatcher.got_event());
+
+    // Test notification from inside the plugin
+    plugin->component_handler_extension->notifyPropertyValueChange(test_utils::Vst3TestPlugin::PROPERTY_ID_2,
+                                                                   elk::PropertyValue("seven", 5));
+    event = _host_control._dummy_dispatcher.retrieve_event();
+    ASSERT_TRUE(event);
+    ASSERT_TRUE(event->is_property_change_notification());
+    typed_event = static_cast<PropertyChangeNotificationEvent*>(event.get());
+    ASSERT_EQ("seven", typed_event->value());
+    ASSERT_EQ(_module_under_test->id(), typed_event->processor_id());
+    ASSERT_EQ(test_utils::Vst3TestPlugin::PROPERTY_ID_2, typed_event->property_id());
+
+    // Queue should now be empty again
+    ASSERT_FALSE(_host_control._dummy_dispatcher.got_event());
+}
+
+TEST_F(TestVst3xWrapper, TestAsyncWork)
+{
+    Steinberg::IPtr<test_utils::Vst3TestPlugin> plugin = new test_utils::Vst3TestPlugin();
+    SetUp(plugin.get());
+    _module_under_test->set_enabled(true);
+    ASSERT_TRUE(plugin->component_handler_extension);
+
+    // Fake an audio thread environment
+    twine::ThreadRtFlag flag;
+    ASSERT_TRUE(plugin->send_async_work_request());
+    RtEvent rt_event;
+    ASSERT_FALSE(_event_queue.empty());
+    ASSERT_TRUE(_event_queue.pop(rt_event));
+    ASSERT_EQ(RtEventType::ASYNC_WORK, rt_event.type());
+    // Manually execute the event
+    auto typed_event = rt_event.async_work_event();
+    auto res = typed_event->callback()(typed_event->callback_data(), typed_event->event_id());
+    auto return_event = RtEvent::make_async_work_completion_event(_module_under_test->id(), typed_event->event_id(), res);
+    _module_under_test->process_event(return_event);
+
+    ASSERT_EQ(plugin->_last_async_id, plugin->_last_async_id_received);
+    ASSERT_EQ(typed_event->event_id() + 10, plugin->_last_async_status);
 }
 
 class TestVst3xUtils : public ::testing::Test

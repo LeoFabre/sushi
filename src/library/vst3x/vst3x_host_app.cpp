@@ -35,12 +35,24 @@ ELK_POP_WARNING
 
 #include "vst3x_host_app.h"
 #include "vst3x_wrapper.h"
+#include "vst3x_utils.h"
+
+
+// Define the UUIDs for extensions:
+DEF_CLASS_IID (elk::IElkComponentHandlerExtension)
+DEF_CLASS_IID (elk::IElkControllerExtension)
+DEF_CLASS_IID (elk::IElkProcessorExtension)
 
 namespace sushi::internal::vst3 {
 
 ELKLOG_GET_LOGGER_WITH_MODULE_NAME("vst3");
 
 constexpr char HOST_NAME[] = "Sushi";
+
+Steinberg::tresult SushiHostApplication::queryInterface(const char* iid, void** obj)
+{
+    return HostApplication::queryInterface(iid, obj);
+}
 
 Steinberg::tresult SushiHostApplication::getName(Steinberg::Vst::String128 name)
 
@@ -54,6 +66,13 @@ ComponentHandler::ComponentHandler(Vst3xWrapper* wrapper_instance,
                                    HostControl* host_control) : _wrapper_instance(wrapper_instance),
                                                                 _host_control(host_control)
 {}
+
+Steinberg::tresult ComponentHandler::queryInterface(const char* iid, void** obj)
+{
+    DEF_INTERFACE (elk::IElkComponentHandlerExtension);
+    DEF_INTERFACE (Steinberg::Vst::IComponentHandler);
+    return Steinberg::kResultFalse;
+}
 
 Steinberg::tresult ComponentHandler::performEdit(Steinberg::Vst::ParamID parameter_id,
                                                  Steinberg::Vst::ParamValue normalized_value)
@@ -74,6 +93,33 @@ Steinberg::tresult ComponentHandler::restartComponent(Steinberg::int32 flags)
         return Steinberg::kResultOk;
     }
     return Steinberg::kResultFalse;
+}
+
+Steinberg::tresult ComponentHandler::notifyPropertyValueChange(Steinberg::int32 propertyId, const elk::PropertyValue& value)
+{
+    if (twine::is_current_thread_realtime())
+    {
+        ELKLOG_LOG_WARNING("notifyPropertyValueChange() called from a realtime thread");
+        return Steinberg::kResultFalse;
+    }
+    _host_control->post_event(std::make_unique<PropertyChangeNotificationEvent>(_wrapper_instance->id(),
+                                                                                propertyId,
+                                                                                std::string(value.value, value.length),
+                                                                                IMMEDIATE_PROCESS));
+    return Steinberg::kResultOk;
+}
+
+Steinberg::tresult ComponentHandler::requestAsyncWork(elk::AsyncWorkCallback callback, void* data, Steinberg::int32& requestId)
+{
+    if (!callback || !twine::is_current_thread_realtime())
+    {
+        ELKLOG_LOG_WARNING_IF(!twine::is_current_thread_realtime(), "requestAsyncWork called from outside the audio thread");
+        return Steinberg::kInvalidArgument;
+    }
+
+    auto id = _wrapper_instance->_request_async_work(callback, data);
+    requestId = id;
+    return Steinberg::kResultOk;
 }
 
 /* ConnectionProxy is more or less ripped straight out of Steinberg example code.
@@ -199,14 +245,15 @@ bool PluginInstance::load_plugin(const std::string& plugin_path, const std::stri
     {
         return false;
     }
-    auto res = component->initialize(_host_app);
+
+    auto res = component->initialize(static_cast<Steinberg::Vst::IHostApplication*>(_host_app));
     if (res != Steinberg::kResultOk)
     {
         ELKLOG_LOG_ERROR("Failed to initialize component with error code: {}", res);
         return false;
     }
 
-    auto processor = load_processor(component);
+    auto processor = query_vst_interface<Steinberg::Vst::IAudioProcessor>(component);
     if (!processor)
     {
         ELKLOG_LOG_ERROR("Failed to get processor from component");
@@ -220,13 +267,48 @@ bool PluginInstance::load_plugin(const std::string& plugin_path, const std::stri
         return false;
     }
 
-    res = controller->initialize(_host_app);
+    res = controller->initialize(static_cast<Steinberg::Vst::IHostApplication*>(_host_app));
     if (res != Steinberg::kResultOk)
     {
         ELKLOG_LOG_ERROR("Failed to initialize component with error code: {}", res);
         return false;
     }
 
+    _component = component;
+    _processor = processor;
+    _controller = controller;
+    _name = plugin_name;
+
+    _query_extension_interfaces();
+
+    if (!_connect_components())
+    {
+        ELKLOG_LOG_ERROR("Failed to connect component to editor");
+    }
+    return true;
+}
+
+bool PluginInstance::load_plugin_from_component(Steinberg::Vst::IComponent* component, const std::string& plugin_name)
+{
+    assert(component);
+    auto res = component->initialize(static_cast<Steinberg::Vst::IHostApplication*>(_host_app));
+    if (res != Steinberg::kResultOk)
+    {
+        ELKLOG_LOG_ERROR("Failed to initialize component with error code: {}", res);
+        return false;
+    }
+    auto processor = query_vst_interface<Steinberg::Vst::IAudioProcessor>(component);
+    if (!processor)
+    {
+        ELKLOG_LOG_ERROR("Failed to get processor from component");
+        return false;
+    }
+    auto controller = query_vst_interface<Steinberg::Vst::IEditController>(component);
+    if (!controller)
+    {
+        ELKLOG_LOG_ERROR("Failed to get controller from component");
+        return false;
+    }
     _component = component;
     _processor = processor;
     _controller = controller;
@@ -243,19 +325,32 @@ bool PluginInstance::load_plugin(const std::string& plugin_path, const std::stri
 
 void PluginInstance::_query_extension_interfaces()
 {
-    Steinberg::Vst::IMidiMapping* midi_mapper;
-    auto res = _controller->queryInterface(Steinberg::Vst::IMidiMapping::iid, reinterpret_cast<void**>(&midi_mapper));
-    if (res == Steinberg::kResultOk)
+    auto midi_mapper = query_vst_interface<Steinberg::Vst::IMidiMapping>(_controller.get());
+    if (midi_mapper)
     {
         _midi_mapper = midi_mapper;
         ELKLOG_LOG_INFO("Plugin supports Midi Mapping interface");
     }
-    Steinberg::Vst::IUnitInfo* unit_info;
-    res = _controller->queryInterface(Steinberg::Vst::IUnitInfo::iid, reinterpret_cast<void**>(&unit_info));
-    if (res == Steinberg::kResultOk)
+
+    auto unit_info = query_vst_interface<Steinberg::Vst::IUnitInfo>(_controller.get());
+    if (unit_info)
     {
         _unit_info = unit_info;
         ELKLOG_LOG_INFO("Plugin supports Unit Info interface for programs");
+    }
+
+    auto processor_extension = query_vst_interface<::elk::IElkProcessorExtension>(_processor.get());
+    if (processor_extension)
+    {
+        _elk_processor_extension = processor_extension;
+        ELKLOG_LOG_INFO("Plugin supports Elk Processor Extension");
+    }
+
+    auto controller_extension = query_vst_interface<elk::IElkControllerExtension>(_controller.get());
+    if (processor_extension)
+    {
+        _elk_controller_extension = controller_extension;
+        ELKLOG_LOG_INFO("Plugin supports Elk Controller Extension");
     }
 }
 
@@ -339,29 +434,15 @@ Steinberg::Vst::IComponent* load_component(Steinberg::IPluginFactory* factory,
     return nullptr;
 }
 
-Steinberg::Vst::IAudioProcessor* load_processor(Steinberg::Vst::IComponent* component)
-{
-    // This is how you properly cast the component to a processor
-    Steinberg::Vst::IAudioProcessor* processor;
-    auto res = component->queryInterface (Steinberg::Vst::IAudioProcessor::iid,
-                                     reinterpret_cast<void**>(&processor));
-    if (res == Steinberg::kResultOk)
-    {
-        return processor;
-    }
-    return nullptr;
-}
-
 Steinberg::Vst::IEditController* load_controller(Steinberg::IPluginFactory* factory,
                                                   Steinberg::Vst::IComponent* component)
 {
-    /* The controller can be implemented both as a part of the component or
-     * as a separate object, Steinberg recommends the latter, JUCE does the
-     * former in their plugin adaptor */
-    Steinberg::Vst::IEditController* controller;
-    auto res = component->queryInterface(Steinberg::Vst::IEditController::iid,
-                                         reinterpret_cast<void**>(&controller));
-    if (res == Steinberg::kResultOk)
+    /* The controller can be implemented both as a part of the component (if inhering from
+     * SingleComponentEffect) or as a separate object, Steinberg recommends the latter,
+     * JUCE does the former in their plugin adaptor. */
+
+    auto controller = query_vst_interface<Steinberg::Vst::IEditController>(component);
+    if (controller)
     {
         return controller;
     }
@@ -372,14 +453,14 @@ Steinberg::Vst::IEditController* load_controller(Steinberg::IPluginFactory* fact
         Steinberg::FUID controllerID(controllerTUID);
         if (controllerID.isValid())
         {
-            res = factory->createInstance(controllerID, Steinberg::Vst::IEditController::iid,
-                                          reinterpret_cast<void**>(&controller));
+            auto res = factory->createInstance(controllerID, Steinberg::Vst::IEditController::iid,
+                                               reinterpret_cast<void**>(&controller));
             if (res == Steinberg::kResultOk)
             {
                 return controller;
             }
+            ELKLOG_LOG_ERROR("Failed to create controller with error code: {}", res);
         }
-        ELKLOG_LOG_ERROR("Failed to create controller with error code: {}", res);
     }
     return nullptr;
 }

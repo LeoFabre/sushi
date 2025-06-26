@@ -40,6 +40,7 @@ ELK_DISABLE_SHORTEN_64_TO_32
 #include "public.sdk/source/vst/hosting/module.h"
 #include "base/source/fobject.h"
 #include "public.sdk/source/vst/hosting/hostclasses.h"
+#include "vst3x_extensions.h"
 
 ELK_POP_WARNING
 
@@ -55,23 +56,38 @@ class ConnectionProxy;
 class SushiHostApplication : public Steinberg::Vst::HostApplication
 {
 public:
+    SUSHI_DECLARE_NON_COPYABLE(SushiHostApplication);
+
     SushiHostApplication() : Steinberg::Vst::HostApplication() {}
-    Steinberg::tresult getName (Steinberg::Vst::String128 name) override;
+
+    Steinberg::tresult PLUGIN_API queryInterface (const Steinberg::TUID iid, void** obj) override;
+
+    Steinberg::tresult PLUGIN_API getName (Steinberg::Vst::String128 name) override;
+
+    // Refer addRef/release functions to the base class implementation
+    REFCOUNT_METHODS(Steinberg::Vst::HostApplication);
 };
 
-class ComponentHandler : public Steinberg::Vst::IComponentHandler, public Steinberg::FObject
+class ComponentHandler : public Steinberg::Vst::IComponentHandler,  public elk::IElkComponentHandlerExtension, public Steinberg::FObject
 {
 public:
     SUSHI_DECLARE_NON_COPYABLE(ComponentHandler);
 
     explicit ComponentHandler(Vst3xWrapper* wrapper_instance, HostControl* host_control);
+
+    Steinberg::tresult PLUGIN_API queryInterface (const Steinberg::TUID iid, void** obj) override;
+
     Steinberg::tresult PLUGIN_API beginEdit (Steinberg::Vst::ParamID /*id*/) override {return Steinberg::kNotImplemented;}
     Steinberg::tresult PLUGIN_API performEdit (Steinberg::Vst::ParamID parameter_id, Steinberg::Vst::ParamValue normalized_value) override;
     Steinberg::tresult PLUGIN_API endEdit (Steinberg::Vst::ParamID /*parameter_id*/) override {return Steinberg::kNotImplemented;}
     Steinberg::tresult PLUGIN_API restartComponent (Steinberg::int32 flags) override;
 
+    // From elk::IComponentHandlerExtension
+    Steinberg::tresult PLUGIN_API notifyPropertyValueChange(Steinberg::int32 propertyId, const elk::PropertyValue& value) override;
+    Steinberg::tresult PLUGIN_API requestAsyncWork(elk::AsyncWorkCallback callback, void* data, Steinberg::int32& requestId) override;
+
+    // Refer addRef/release functions to the base class implementation
     REFCOUNT_METHODS(Steinberg::FObject);
-    DEF_INTERFACES_1(Steinberg::Vst::IComponentHandler, Steinberg::FObject);
 
 private:
     Vst3xWrapper* _wrapper_instance;
@@ -89,14 +105,32 @@ public:
     explicit PluginInstance(SushiHostApplication* host_app);
     ~PluginInstance();
 
+    /**
+     * @brief Load a plugin from file
+     * @param plugin_path Path to the .vst file or folder
+     * @param plugin_name Name of the plugin to load from the file, vst3 allows you to pack multiple plugins in one file/bundle
+     * @return True if successful, false otherwise
+     */
     bool load_plugin(const std::string& plugin_path, const std::string& plugin_name);
-    const std::string& name() const {return _name;}
-    const std::string& vendor() const {return _vendor;}
-    Steinberg::Vst::IComponent* component() const {return _component.get();}
-    Steinberg::Vst::IAudioProcessor* processor() const {return _processor.get();}
-    Steinberg::Vst::IEditController* controller() const {return _controller.get();}
-    Steinberg::Vst::IUnitInfo* unit_info() {return _unit_info;}
-    Steinberg::Vst::IMidiMapping* midi_mapper() {return _midi_mapper;}
+
+    /**
+     * @brief Load a plugin from an already instantiated component. This assumes the plugin is built from SingleComponentEffect
+     * @param component The component to load from
+     * @param plugin_name Name of the plugin to load
+     * @return True if successful, false otherwise
+     */
+    bool load_plugin_from_component(Steinberg::Vst::IComponent* component, const std::string& plugin_name);
+
+    [[nodiscard]] const std::string& name() const {return _name;}
+    [[nodiscard]] const std::string& vendor() const {return _vendor;}
+    [[nodiscard]] Steinberg::Vst::IComponent* component() const {return _component.get();}
+    [[nodiscard]] Steinberg::Vst::IAudioProcessor* processor() const {return _processor.get();}
+    [[nodiscard]] Steinberg::Vst::IEditController* controller() const {return _controller.get();}
+    [[nodiscard]] Steinberg::Vst::IUnitInfo* unit_info() {return _unit_info;}
+    [[nodiscard]] Steinberg::Vst::IMidiMapping* midi_mapper() {return _midi_mapper;}
+    [[nodiscard]] elk::IElkControllerExtension* controller_extension() {return _elk_controller_extension.get();}
+    [[nodiscard]] elk::IElkProcessorExtension* processor_extension() {return _elk_processor_extension.get();}
+
     bool notify_controller(Steinberg::Vst::IMessage* message);
     bool notify_processor(Steinberg::Vst::IMessage* message);
 
@@ -112,20 +146,24 @@ private:
     std::shared_ptr<VST3::Hosting::Module> _module;
 
     // Reference counted pointers to plugin objects
-    Steinberg::OPtr<Steinberg::Vst::IComponent>      _component;
-    Steinberg::OPtr<Steinberg::Vst::IAudioProcessor> _processor;
-    Steinberg::OPtr<Steinberg::Vst::IEditController> _controller;
+    Steinberg::OPtr<Steinberg::Vst::IComponent>      _component{nullptr};
+    Steinberg::OPtr<Steinberg::Vst::IAudioProcessor> _processor{nullptr};
+    Steinberg::OPtr<Steinberg::Vst::IEditController> _controller{nullptr};
 
     // Abstract optional interfaces implemented by one of the objects above:
     Steinberg::OPtr<Steinberg::Vst::IMidiMapping>    _midi_mapper{nullptr};
     Steinberg::OPtr<Steinberg::Vst::IUnitInfo>       _unit_info{nullptr};
+
+    // Optional Elk specific extension interfaces implemented by the plugin
+
+    Steinberg::OPtr<elk::IElkProcessorExtension>     _elk_processor_extension{nullptr};
+    Steinberg::OPtr<elk::IElkControllerExtension>    _elk_controller_extension{nullptr};
 
     Steinberg::OPtr<ConnectionProxy> _controller_connection;
     Steinberg::OPtr<ConnectionProxy> _component_connection;
 };
 
 Steinberg::Vst::IComponent* load_component(Steinberg::IPluginFactory* factory, const std::string& plugin_name);
-Steinberg::Vst::IAudioProcessor* load_processor(Steinberg::Vst::IComponent* component);
 Steinberg::Vst::IEditController* load_controller(Steinberg::IPluginFactory* factory, Steinberg::Vst::IComponent*);
 
 } // end namespace vst

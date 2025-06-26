@@ -83,7 +83,7 @@ protected:
                                                   "int",
                                                   -10,
                                                   10,
-                                                  Direction::AUTOMATABLE,
+                                                  Direction::OUTPUT,
                                                   new ParameterPreProcessor<int>(-10, 10)};
 
     BoolParameterDescriptor _module_under_test_bool{"bool_parameter",
@@ -94,7 +94,7 @@ protected:
                                                     Direction::AUTOMATABLE,
                                                     new ParameterPreProcessor<bool>(0, 1)};
 
-    StringPropertyDescriptor _module_under_test_string{"string_property", "String Property", ""};
+    StringPropertyDescriptor _module_under_test_string{"string_property", "String Property", "", Direction::OUTPUT};
     DataPropertyDescriptor _module_under_test_data{"data_property", "Data Property", "data"};
 };
 
@@ -123,6 +123,12 @@ TEST_F(TestParameter, TestTypeNameAndLabel)
     EXPECT_EQ("int", _module_under_test_int.unit());
     EXPECT_EQ("", _module_under_test_string.unit());
     EXPECT_EQ("data", _module_under_test_data.unit());
+
+    EXPECT_TRUE(_module_under_test_bool.automatable());
+    EXPECT_TRUE(_module_under_test_float.automatable());
+    EXPECT_FALSE(_module_under_test_int.automatable());
+    EXPECT_FALSE(_module_under_test_string.automatable());
+    EXPECT_FALSE(_module_under_test_data.automatable());
 }
 
 TEST(TestParameterValue, TestSet)

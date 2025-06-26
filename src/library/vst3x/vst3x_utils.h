@@ -50,6 +50,21 @@ namespace sushi::internal::vst3 {
 constexpr int VST_WRAPPER_MAX_N_CHANNELS = MAX_TRACK_CHANNELS;
 
 /**
+ * @brief Query and return an interface class if the passed component implements it
+ */
+template <typename InterfaceClass>
+InterfaceClass* query_vst_interface(Steinberg::FUnknown* component)
+{
+    InterfaceClass* interface;
+    auto res = component->queryInterface (InterfaceClass::iid, reinterpret_cast<void**>(&interface));
+    if (res == Steinberg::kResultOk)
+    {
+        return interface;
+    }
+    return nullptr;
+}
+
+/**
  * @brief Wrapping the processdata in our own class for convenience
  */
 class SushiProcessData : public Steinberg::Vst::ProcessData

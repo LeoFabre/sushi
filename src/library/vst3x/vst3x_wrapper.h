@@ -113,6 +113,10 @@ public:
 
     std::pair<ProcessorReturnCode, std::string> parameter_value_formatted(ObjectId parameter_id) const override;
 
+    std::pair<ProcessorReturnCode, std::string> property_value(ObjectId property_id) const override;
+
+    ProcessorReturnCode set_property_value(ObjectId property_id, const std::string& value) override;
+
     bool supports_programs() const override {return _supports_programs;}
 
     int program_count() const override {return _program_count;}
@@ -144,7 +148,8 @@ public:
     }
 
 private:
-    friend Vst3xWrapperAccessor;
+    friend class Vst3xWrapperAccessor;
+    friend class ComponentHandler;
 
     /**
      * @brief Tell the plugin that we're done with it and release all resources
@@ -152,12 +157,16 @@ private:
      */
     void _cleanup();
 
+    ProcessorReturnCode _setup();
+
     /**
      * @brief Iterate over VsT parameters and register internal FloatParameterDescriptor
      *        for each one of them.
      * @return True if all parameters were registered properly.
      */
     bool _register_parameters();
+
+    bool _register_properties();
 
     bool _setup_audio_buses();
 
@@ -198,6 +207,8 @@ private:
 
     void _set_state_rt(Vst3xRtState* state);
 
+    EventId _request_async_work(AsyncWorkCallback callback, void* data);
+
     struct SpecialParameter
     {
         bool supported{false};
@@ -208,6 +219,12 @@ private:
     {
         Steinberg::Vst::ParamID id;
         float value;
+    };
+
+    struct PropertyInfo
+    {
+        bool automatable{false};
+        bool audio_thread_notification{false};
     };
 
     float _sample_rate;
@@ -248,8 +265,7 @@ private:
     memory_relaxed_aquire_release::CircularFifo<Vst3xRtState*, STATE_CHANGE_QUEUE_SIZE> _state_change_queue;
     memory_relaxed_aquire_release::CircularFifo<ParameterUpdate, PARAMETER_UPDATE_QUEUE_SIZE> _parameter_update_queue;
     std::map<Steinberg::Vst::ParamID, const ParameterDescriptor*> _parameters_by_vst3_id;
-
-    friend class ComponentHandler;
+    std::map<Steinberg::Vst::ParamID, PropertyInfo> _property_configs;
 };
 
 Steinberg::Vst::SpeakerArrangement speaker_arr_from_channels(int channels);
