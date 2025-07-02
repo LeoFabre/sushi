@@ -113,16 +113,15 @@ Steinberg::tresult Vst3TestPlugin::setPropertyValue(Steinberg::int32 propertyId,
     return kInvalidArgument;
 }
 
-Steinberg::tresult Vst3TestPlugin::propertyValueChanged(Steinberg::int32 propertyId, const elk::PropertyValue& value)
+void Vst3TestPlugin::propertyValueChanged(Steinberg::int32 propertyId, const elk::PropertyValue& value)
 {
     _last_changed_property_id = propertyId;
-    return Steinberg::kResultOk;
 }
 
-void Vst3TestPlugin::asyncWorkCompleted(Steinberg::int32 requestId, Steinberg::int32 requestStatus)
+void Vst3TestPlugin::asyncWorkCompleted(Steinberg::int32 requestId, Steinberg::int32 requestReturnValue)
 {
     _last_async_id_received = requestId;
-    _last_async_status = requestStatus;
+    _last_async_status = requestReturnValue;
 }
 
 Steinberg::tresult Vst3TestPlugin::queryInterface(const char* iid, void** obj)
@@ -156,4 +155,4 @@ bool Vst3TestPlugin::send_async_work_request()
 }// namespace test_utils
 
 
-#endif SUSHI_BUILD_WITH_VST3
+#endif //SUSHI_BUILD_WITH_VST3

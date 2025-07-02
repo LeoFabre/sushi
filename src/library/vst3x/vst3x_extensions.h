@@ -22,7 +22,6 @@
 #define SUSHI_LIBRARY_VST3X_EXTENSIONS_H
 
 #include "pluginterfaces/base/funknown.h"
-#include "pluginterfaces/base/falignpush.h"
 
 #include "pluginterfaces/vst/vsttypes.h"
 
@@ -32,8 +31,8 @@ constexpr auto STRING_PROPERTY_DEFAULT_LENGTH = 65535;
 
 struct PropertyValue
 {
-    const Steinberg::char8* value{nullptr};
-    Steinberg::int32 length{0};
+    const Steinberg::char8* value{nullptr}; ///< Pointer to a string buffer.
+    Steinberg::int32 length{0};             ///< Length in chars, not including null terminator.
 };
 
 struct PropertyInfo
@@ -54,31 +53,77 @@ struct PropertyInfo
 
 typedef Steinberg::int32 (*AsyncWorkCallback)(void* data, Steinberg::uint16 requestId);
 
-// Extends Steinberg::Vst::IComponentHandler
-// Passed via the setComponentHandler() call
+/**
+ * @brief Host-side extension interface for notifying property changes and asynchronous work requests.
+ * Extends Steinberg::Vst::IComponentHandler.
+ */
 class IElkComponentHandlerExtension : public Steinberg::FUnknown
 {
 public:
+    /**
+     * @brief Call from a non-realtime thread to notify the host that a string property has changed.
+     * @param propertyId The unique ID of the property
+     * @param value The new value. The plugin should set the PropertyValue value and length members to point to string data
+     *              owned by the plugin. The host will copy this data before returning.
+     * @return kResultOk if successful, error code otherwise.
+     */
     virtual Steinberg::tresult PLUGIN_API notifyPropertyValueChange(Steinberg::int32 propertyId, const PropertyValue& value) = 0;
 
-    virtual Steinberg::tresult PLUGIN_API requestAsyncWork(AsyncWorkCallback callback, void* data, Steinberg::int32& requestId) = 0;
+    /**
+     * @brief Call from the audio thread of the plugin to request work in a non-rt thread. The host will call the callback in
+     *        a background worker thread and deliver the return value back to the audio thread via a call to asyncWorkCompleted.
+     * @param callback This function pointer will be called in a worker thread.
+     * @param data Opaque pointer that will be passed to the callback, can be null.
+     * @param requestId [out] Populated by the host with a unique id that can be used to keep track of requests. The same
+     *                  id will be passed to the callback.
+     * @return kResultOk if successful, error code otherwise.
+     */
+    virtual Steinberg::tresult PLUGIN_API requestAsyncWork(AsyncWorkCallback callback, void* data, Steinberg::int32& requestId /*out*/) = 0;
 
     static const Steinberg::FUID iid;
 };
 
 DECLARE_CLASS_IID (IElkComponentHandlerExtension, 0x83952AFF, 0x52844C67, 0xAC127387, 0x196C5DD4)
 
-// Extends Steinberg::Vst::IEditController
-// Implemented by the plugin
+/**
+ * @brief Plugin-side controller extension interface for managing properties.
+ * Extends Steinberg::Vst::IEditController.
+ */
 class IElkControllerExtension : public Steinberg::FUnknown
 {
 public:
+    /**
+     * @brief The number of string properties implemented by the plugin.
+     * @return An integer containing the number of string properties.
+     */
     virtual Steinberg::int32 PLUGIN_API getPropertyCount() = 0;
 
+    /**
+     * @brief Query information on string properties.
+     * @param propertyIndex an index ranging from 0 to the number returned by getPropertyCount - 1.
+     * @param info A PropertyInfo struct provided by the caller that should be populated by the plugin.
+     * @return kResultOk if PropertyIndex corresponds to a valid property, error code otherwise.
+     */
     virtual Steinberg::tresult PLUGIN_API getPropertyInfo (Steinberg::int32 propertyIndex, elk::PropertyInfo& info /*out*/) = 0;
 
+    /**
+     * @brief Called by the host from a non-realtime thread to query the value of a string property. May be called concurrently
+     *        with setPropertyValue.
+     * @param propertyId the unique id of the property.
+     * @param value A PropertyValue struct provided by the host. The plugin should populate the data and length members to point to
+     *              memory owned by the plugin. The host will copy the data if the call returns with kResultOk.
+     * @return kResultOk if propertyId corresponds to a valid property, error code otherwise.
+     */
     virtual Steinberg::tresult PLUGIN_API getPropertyValue(Steinberg::int32 propertyId, PropertyValue& value) = 0;
 
+    /**
+     * @brief Called by the host from a non-realtime thread to set the value of a string property. May be called concurrently
+     *        with getPropertyValue.
+     * @param propertyId The unique id of the property.
+     * @param value A reference to a PropertyValue struct with string data owned by the host and valid for the duration of
+     *              the call. The plugin must copy the data if it is to be retained after the call has returned.
+     * @return kResultOk if propertyId corresponds to a valid property, error code otherwise.
+     */
     virtual Steinberg::tresult PLUGIN_API setPropertyValue(Steinberg::int32 propertyId, const PropertyValue& value) = 0;
 
     static const Steinberg::FUID iid;
@@ -86,14 +131,28 @@ public:
 
 DECLARE_CLASS_IID (IElkControllerExtension, 0x1016CCA4, 0x930B4F58, 0x83918C4F, 0x8C4F99AB)
 
-// Extends Steinberg::Vst::IAudioProcessor
-// Implemented by the plugin
+/**
+ * @brief Plugin-side controller extension interface for receiving notifications.
+ * Extends Steinberg::Vst::IAudioProcessor
+ */
 class IElkProcessorExtension : public Steinberg::FUnknown
 {
 public:
-    virtual Steinberg::tresult PLUGIN_API propertyValueChanged(Steinberg::int32 propertyId, const PropertyValue& value) = 0;
+    /**
+     * @brief If kAudioThreadNotify is set to true for this property, id addition to calling setPropertyValue() from a non
+     *        realtime thread, the host will call this function with the new value on the audio thread before a call to process().
+     * @param propertyId The unique id of the property.
+     * @param value A reference to a PropertyValue struct with string data owned by the host and valid for the duration of the call.
+     */
+    virtual void PLUGIN_API propertyValueChanged(Steinberg::int32 propertyId, const PropertyValue& value) = 0;
 
-    virtual void PLUGIN_API asyncWorkCompleted(Steinberg::int32 requestId, Steinberg::int32 requestStatus) = 0;
+    /**
+     * @brief Called by the host on the audio thread after an async work request requested by ICompponentHandlerExtension::requestAsyncWork()
+     *        has completed.
+     * @param requestId The unique request id returned by requestAsyncWork().
+     * @param requestReturnValue The return value from the non realtime callback.
+     */
+    virtual void PLUGIN_API asyncWorkCompleted(Steinberg::int32 requestId, Steinberg::int32 requestReturnValue) = 0;
 
     static const Steinberg::FUID iid;
 };

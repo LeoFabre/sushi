@@ -36,9 +36,9 @@ public:
 
     Steinberg::tresult PLUGIN_API setPropertyValue(Steinberg::int32 propertyId, const elk::PropertyValue& value) override;
 
-    Steinberg::tresult PLUGIN_API propertyValueChanged(Steinberg::int32 propertyId, const elk::PropertyValue& value) override;
+    void PLUGIN_API propertyValueChanged(Steinberg::int32 propertyId, const elk::PropertyValue& value) override;
 
-    void PLUGIN_API asyncWorkCompleted(Steinberg::int32 requestId, Steinberg::int32 requestStatus) override;
+    void PLUGIN_API asyncWorkCompleted(Steinberg::int32 requestId, Steinberg::int32 requestReturnValue) override;
 
     Steinberg::tresult PLUGIN_API queryInterface (const Steinberg::TUID iid, void** obj) override;
 

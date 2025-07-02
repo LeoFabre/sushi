@@ -180,10 +180,11 @@ void Vst3xWrapper::process_event(const RtEvent& event)
         case RtEventType::STRING_PROPERTY_CHANGE:
         {
             auto typed_event = event.property_change_event();
-            auto plugin_extension = _instance.processor_extension();
-            if (plugin_extension)
+            auto ext = _instance.processor_extension();
+            if (ext)
             {
-                plugin_extension->propertyValueChanged(typed_event->param_id(), {typed_event->value()->c_str(), (int)typed_event->value()->size()});
+                ext->propertyValueChanged(typed_event->param_id(),
+                                          {typed_event->value()->c_str(), (int)typed_event->value()->size()});
             }
             async_delete(typed_event->deletable_value());
             break;
@@ -191,10 +192,10 @@ void Vst3xWrapper::process_event(const RtEvent& event)
         case RtEventType::ASYNC_WORK_NOTIFICATION:
         {
             auto typed_event = event.async_work_completion_event();
-            auto processor_extension = _instance.processor_extension();
-            if (processor_extension)
+            auto ext = _instance.processor_extension();
+            if (ext)
             {
-                processor_extension->asyncWorkCompleted(typed_event->sending_event_id(), typed_event->return_status());
+                ext->asyncWorkCompleted(typed_event->sending_event_id(), typed_event->return_status());
             }
             break;
         }
@@ -401,7 +402,6 @@ ProcessorReturnCode Vst3xWrapper::set_property_value(ObjectId property_id, const
                                                                                        value,
                                                                                        IMMEDIATE_PROCESS));
             // Audio thread notification
-
             if (config->second.audio_thread_notification)
             {
                 _host_control.post_event(std::make_unique<StringPropertyEvent>(this->id(),
@@ -783,7 +783,6 @@ bool Vst3xWrapper::_register_properties()
 
             PropertyInfo config = {.automatable = automatable, .audio_thread_notification = audio_thread_notification};
             _property_configs[info.id] = config;
-
             _parameters_by_vst3_id[param->id()] = param;
             ELKLOG_LOG_DEBUG("Registered string property \"{}\"\"", name);
         }

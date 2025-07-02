@@ -15,9 +15,8 @@
 
 /**
  * @brief VST 3.x  plugin loader
- * @Copyright 2017-2023 Elk Audio AB, Stockholm
+ * @Copyright 2017-2025 Elk Audio AB, Stockholm
  */
-
 #include "elk-warning-suppressor/warning_suppressor.hpp"
 
 ELK_PUSH_WARNING
