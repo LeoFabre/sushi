@@ -21,7 +21,7 @@ Vst3TestPlugin::Vst3TestPlugin()
     info.id = PROPERTY_ID_1;
     VST3::StringConvert::convert("property_1", info.name);
     VST3::StringConvert::convert("Property 1", info.label);
-    info.flags = elk::PropertyInfo::kAudioThreadNotify | elk::PropertyInfo::kCanAutomate;
+    info.flags = elk::PropertyInfo::kAudioThreadNotify;
     _string_properties[0] = info;
 
     info.id = PROPERTY_ID_2;
@@ -34,7 +34,7 @@ Vst3TestPlugin::Vst3TestPlugin()
 
 Steinberg::int32 test_callback(void* data, Steinberg::uint16 id)
 {
-    return 10 + id;
+    return CALLBACK_ID + id;
 }
 
 Vst3TestPlugin::~Vst3TestPlugin() = default;
@@ -52,6 +52,7 @@ Steinberg::tresult Vst3TestPlugin::initialize(Steinberg::FUnknown* context)
     }
 
     host_app = query_vst_interface<IHostApplication>(context);
+    host_extension = query_vst_interface<elk::IElkHostExtension>(context);
 
     return kResultTrue;
 }
@@ -140,10 +141,11 @@ Steinberg::tresult Vst3TestPlugin::setComponentHandler(Steinberg::Vst::IComponen
     }
     return kResultOk;
 }
+
 bool Vst3TestPlugin::send_async_work_request()
 {
     Steinberg::int32 id;
-    auto res = component_handler_extension->requestAsyncWork(test_callback, nullptr, id);
+    auto res = host_extension->requestAsyncWork(test_callback, nullptr, id);
     _last_async_id = id;
     if (res == Steinberg::kResultOk)
     {

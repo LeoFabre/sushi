@@ -113,7 +113,7 @@ TEST(TestVst3xPluginInstance, TestLoadPlugin)
     auto full_path = std::filesystem::path(SUSHI_VST3_TEST_PLUGIN_PATH);
     auto full_test_plugin_path = std::filesystem::absolute(full_path).string();
 
-    SushiHostApplication host_app;
+    SushiHostApplication host_app(nullptr);
     PluginInstance module_under_test(&host_app);
     bool success = module_under_test.load_plugin(full_test_plugin_path, PLUGIN_NAME);
     ASSERT_TRUE(success);
@@ -126,7 +126,7 @@ TEST(TestVst3xPluginInstance, TestLoadPlugin)
 TEST(TestVst3xPluginInstance, TestLoadPluginFromErroneousFilename)
 {
     /* Non-existing library */
-    SushiHostApplication host_app;
+    SushiHostApplication host_app(nullptr);
     PluginInstance module_under_test(&host_app);
     bool success = module_under_test.load_plugin("/usr/lib/lxvst/no_plugin.vst3", PLUGIN_NAME);
     ASSERT_FALSE(success);
@@ -184,8 +184,7 @@ protected:
 
         _module_under_test = std::make_unique<Vst3xWrapper>(_host_control.make_host_control_mockup(TEST_SAMPLE_RATE),
                                                             full_plugin_path,
-                                                            plugin_name,
-                                                            &_host_app);
+                                                            plugin_name);
 
         _accessor = std::make_unique<Vst3xWrapperAccessor>(*_module_under_test);
 
@@ -201,8 +200,7 @@ protected:
     {
         _module_under_test = std::make_unique<Vst3xWrapper>(_host_control.make_host_control_mockup(TEST_SAMPLE_RATE),
                                                             "",
-                                                            "test_plugin",
-                                                            &_host_app);
+                                                            "test_plugin");
 
         _accessor = std::make_unique<Vst3xWrapperAccessor>(*_module_under_test);
 
@@ -213,7 +211,6 @@ protected:
         _module_under_test->set_channels(TEST_CHANNEL_COUNT, TEST_CHANNEL_COUNT);
     }
 
-    SushiHostApplication _host_app;
     HostControlMockup _host_control;
     std::unique_ptr<Vst3xWrapper> _module_under_test;
 
@@ -609,6 +606,7 @@ TEST_F(TestVst3xWrapper, TestExtensionInterfaceEnumeration)
 
     // Test that the plugin found the host extension interfaces
     ASSERT_TRUE(plugin->host_app);
+    ASSERT_TRUE(plugin->host_extension);
     ASSERT_TRUE(plugin->component_handler);
     ASSERT_TRUE(plugin->component_handler_extension);
 }
@@ -708,7 +706,7 @@ TEST_F(TestVst3xWrapper, TestAsyncWork)
     _module_under_test->process_event(return_event);
 
     ASSERT_EQ(plugin->_last_async_id, plugin->_last_async_id_received);
-    ASSERT_EQ(typed_event->event_id() + 10, plugin->_last_async_status);
+    ASSERT_EQ(typed_event->event_id() + test_utils::CALLBACK_ID, plugin->_last_async_status);
 }
 
 class TestVst3xUtils : public ::testing::Test

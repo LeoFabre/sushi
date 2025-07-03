@@ -66,18 +66,7 @@ public:
      */
     Vst3xWrapper(HostControl host_control,
                  const std::string& vst_plugin_path,
-                 const std::string& plugin_name,
-                 SushiHostApplication* host_app) :
-            Processor(host_control),
-            _plugin_load_name(plugin_name),
-            _plugin_load_path(vst_plugin_path),
-            _component_handler(this, &_host_control),
-            _instance(host_app)
-    {
-        _max_input_channels = VST_WRAPPER_MAX_N_CHANNELS;
-        _max_output_channels = VST_WRAPPER_MAX_N_CHANNELS;
-        _enabled = false;
-    }
+                 const std::string& plugin_name);
 
     ~Vst3xWrapper() override;
 
@@ -136,6 +125,8 @@ public:
     ProcessorState save_state() const override;
 
     PluginInfo info() const override;
+
+    EventId request_async_work(AsyncWorkCallback callback, void* data);
 
     static void program_change_callback(void* arg, Event* event, int status)
     {
@@ -207,8 +198,6 @@ private:
 
     void _set_state_rt(Vst3xRtState* state);
 
-    EventId _request_async_work(AsyncWorkCallback callback, void* data);
-
     struct SpecialParameter
     {
         bool supported{false};
@@ -244,6 +233,8 @@ private:
     std::string _plugin_load_name;
     std::string _plugin_load_path;
     ComponentHandler _component_handler;
+    SushiHostApplication _host_app;
+
     PluginInstance _instance;
 
     Steinberg::Vst::EventList _in_event_list{VST_WRAPPER_NOTE_EVENT_QUEUE_SIZE};

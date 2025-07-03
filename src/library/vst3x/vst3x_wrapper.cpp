@@ -766,11 +766,10 @@ bool Vst3xWrapper::_register_properties()
         {
             auto name = to_ascii_str(info.name);
             auto label = to_ascii_str(info.label);
-            bool automatable = info.flags & elk::PropertyInfo::kCanAutomate;
             bool read_only = info.flags & elk::PropertyInfo::kIsReadOnly;
             bool audio_thread_notification = info.flags & elk::PropertyInfo::kAudioThreadNotify;
 
-            auto direction = (automatable && !read_only) ? Direction::AUTOMATABLE : Direction::OUTPUT;
+            auto direction = read_only ? Direction::OUTPUT : Direction::AUTOMATABLE;
 
             auto param = new StringPropertyDescriptor(_make_unique_parameter_name(name), label, "", direction);
 
@@ -781,10 +780,10 @@ bool Vst3xWrapper::_register_properties()
                 continue;
             }
 
-            PropertyInfo config = {.automatable = automatable, .audio_thread_notification = audio_thread_notification};
+            PropertyInfo config = {.automatable = !read_only, .audio_thread_notification = audio_thread_notification};
             _property_configs[info.id] = config;
             _parameters_by_vst3_id[param->id()] = param;
-            ELKLOG_LOG_DEBUG("Registered string property \"{}\"\"", name);
+            ELKLOG_LOG_DEBUG("Registered string property \"{}\"\" {} ", name, read_only? "as read only" : "");
         }
     }
     return true;
@@ -1182,11 +1181,25 @@ void Vst3xWrapper::_set_state_rt(Vst3xRtState* state)
     }
 }
 
-EventId Vst3xWrapper::_request_async_work(AsyncWorkCallback callback, void* data)
+EventId Vst3xWrapper::request_async_work(AsyncWorkCallback callback, void* data)
 {
     auto event = RtEvent::make_async_work_event(callback, this->id(), data);
     output_event(event);
     return event.async_work_event()->event_id();
+}
+Vst3xWrapper::Vst3xWrapper(HostControl host_control,
+                           const std::string& vst_plugin_path,
+                           const std::string& plugin_name) : Processor(host_control),
+                                                             _plugin_load_name(plugin_name),
+                                                             _plugin_load_path(vst_plugin_path),
+                                                             _component_handler(this, &_host_control),
+                                                             _host_app(this),
+                                                             _instance(&_host_app)
+
+{
+    _max_input_channels = VST_WRAPPER_MAX_N_CHANNELS;
+    _max_output_channels = VST_WRAPPER_MAX_N_CHANNELS;
+    _enabled = false;
 }
 
 Steinberg::Vst::SpeakerArrangement speaker_arr_from_channels(int channels)

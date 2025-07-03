@@ -37,8 +37,6 @@ public:
     std::pair<ProcessorReturnCode, std::shared_ptr<Processor>> new_instance(const PluginInfo& plugin_info,
                                                                             HostControl& host_control,
                                                                             float sample_rate) override;
-private:
-    std::unique_ptr<SushiHostApplication> _host_app;
 };
 
 } // end namespace sushi::internal::vst3

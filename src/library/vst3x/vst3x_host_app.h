@@ -53,19 +53,25 @@ namespace vst3 {
 class Vst3xWrapper;
 class ConnectionProxy;
 
-class SushiHostApplication : public Steinberg::Vst::HostApplication
+class SushiHostApplication : public Steinberg::Vst::HostApplication, public elk::IElkHostExtension
 {
 public:
     SUSHI_DECLARE_NON_COPYABLE(SushiHostApplication);
 
-    SushiHostApplication() : Steinberg::Vst::HostApplication() {}
+    SushiHostApplication(Vst3xWrapper* wrapper_instance) : Steinberg::Vst::HostApplication(),
+                                                           _wrapper_instance(wrapper_instance) {}
 
     Steinberg::tresult PLUGIN_API queryInterface (const Steinberg::TUID iid, void** obj) override;
 
     Steinberg::tresult PLUGIN_API getName (Steinberg::Vst::String128 name) override;
 
+    Steinberg::tresult PLUGIN_API requestAsyncWork(elk::AsyncWorkCallback callback, void* data, Steinberg::int32& requestId) override;
+
     // Refer addRef/release functions to the base class implementation
     REFCOUNT_METHODS(Steinberg::Vst::HostApplication);
+
+private:
+    Vst3xWrapper* _wrapper_instance;
 };
 
 class ComponentHandler : public Steinberg::Vst::IComponentHandler,  public elk::IElkComponentHandlerExtension, public Steinberg::FObject
@@ -84,7 +90,6 @@ public:
 
     // From elk::IComponentHandlerExtension
     Steinberg::tresult PLUGIN_API notifyPropertyValueChange(Steinberg::int32 propertyId, const elk::PropertyValue& value) override;
-    Steinberg::tresult PLUGIN_API requestAsyncWork(elk::AsyncWorkCallback callback, void* data, Steinberg::int32& requestId) override;
 
     // Refer addRef/release functions to the base class implementation
     REFCOUNT_METHODS(Steinberg::FObject);
@@ -141,7 +146,7 @@ private:
     std::string _name;
     std::string _vendor;
 
-    SushiHostApplication* _host_app{nullptr};
+    SushiHostApplication* _host_app;
 
     std::shared_ptr<VST3::Hosting::Module> _module;
 

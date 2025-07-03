@@ -38,6 +38,7 @@ ELK_POP_WARNING
 
 
 // Define the UUIDs for extensions:
+DEF_CLASS_IID (elk::IElkHostExtension)
 DEF_CLASS_IID (elk::IElkComponentHandlerExtension)
 DEF_CLASS_IID (elk::IElkControllerExtension)
 DEF_CLASS_IID (elk::IElkProcessorExtension)
@@ -50,6 +51,7 @@ constexpr char HOST_NAME[] = "Sushi";
 
 Steinberg::tresult SushiHostApplication::queryInterface(const char* iid, void** obj)
 {
+    DEF_INTERFACE (elk::IElkHostExtension);
     return HostApplication::queryInterface(iid, obj);
 }
 
@@ -58,6 +60,19 @@ Steinberg::tresult SushiHostApplication::getName(Steinberg::Vst::String128 name)
 {
     Steinberg::UString128 str(HOST_NAME);
     str.copyTo (name, 0);
+    return Steinberg::kResultOk;
+}
+
+Steinberg::tresult SushiHostApplication::requestAsyncWork(elk::AsyncWorkCallback callback, void* data, Steinberg::int32& requestId)
+{
+    if (!callback || !twine::is_current_thread_realtime())
+    {
+        ELKLOG_LOG_WARNING_IF(!twine::is_current_thread_realtime(), "requestAsyncWork called from outside the audio thread");
+        return Steinberg::kInvalidArgument;
+    }
+
+    auto id = _wrapper_instance->request_async_work(callback, data);
+    requestId = id;
     return Steinberg::kResultOk;
 }
 
@@ -105,19 +120,6 @@ Steinberg::tresult ComponentHandler::notifyPropertyValueChange(Steinberg::int32 
                                                                                 propertyId,
                                                                                 std::string(value.value, value.length),
                                                                                 IMMEDIATE_PROCESS));
-    return Steinberg::kResultOk;
-}
-
-Steinberg::tresult ComponentHandler::requestAsyncWork(elk::AsyncWorkCallback callback, void* data, Steinberg::int32& requestId)
-{
-    if (!callback || !twine::is_current_thread_realtime())
-    {
-        ELKLOG_LOG_WARNING_IF(!twine::is_current_thread_realtime(), "requestAsyncWork called from outside the audio thread");
-        return Steinberg::kInvalidArgument;
-    }
-
-    auto id = _wrapper_instance->_request_async_work(callback, data);
-    requestId = id;
     return Steinberg::kResultOk;
 }
 

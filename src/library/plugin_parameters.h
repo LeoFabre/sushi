@@ -252,17 +252,9 @@ public:
                              const std::string& label,
                              const std::string& unit,
                              Direction automatable = Direction::AUTOMATABLE) :
-                                             ParameterDescriptor(name, label, unit, enumerated_type)
-    {
-        if (automatable == Direction::AUTOMATABLE)
-        {
-            _automatable = true;
-        }
-        else
-        {
-            _automatable = false;
-        }
-    }
+                                             ParameterDescriptor(name, label, unit, enumerated_type),
+                                             _automatable(automatable == Direction::AUTOMATABLE)
+    {}
 
     ~TypedParameterDescriptor() = default;
 

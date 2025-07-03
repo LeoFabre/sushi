@@ -9,6 +9,8 @@
 
 namespace test_utils {
 
+constexpr auto CALLBACK_ID = 101;
+
 class Vst3TestPlugin : public Steinberg::Vst::SingleComponentEffect, ::elk::IElkControllerExtension, ::elk::IElkProcessorExtension
 {
 public:
@@ -51,6 +53,7 @@ public:
 
     // Everything is public to make it easy for tests to verify that everything works as intended
     Steinberg::OPtr<Steinberg::Vst::IHostApplication> host_app{nullptr};
+    Steinberg::OPtr<elk::IElkHostExtension> host_extension{nullptr};
     Steinberg::Vst::IComponentHandler* component_handler{nullptr};
     Steinberg::OPtr<elk::IElkComponentHandlerExtension> component_handler_extension{nullptr};
 

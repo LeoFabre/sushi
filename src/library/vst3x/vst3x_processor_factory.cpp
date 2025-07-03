@@ -40,8 +40,7 @@ Vst3xProcessorFactory::~Vst3xProcessorFactory() = default;
 
 #ifdef SUSHI_BUILD_WITH_VST3
 
-Vst3xProcessorFactory::Vst3xProcessorFactory() : _host_app(std::make_unique<SushiHostApplication>())
-{}
+Vst3xProcessorFactory::Vst3xProcessorFactory() = default;
 
 std::pair<ProcessorReturnCode, std::shared_ptr<Processor>> Vst3xProcessorFactory::new_instance(const PluginInfo& plugin_info,
                                                                                                HostControl& host_control,
@@ -49,8 +48,7 @@ std::pair<ProcessorReturnCode, std::shared_ptr<Processor>> Vst3xProcessorFactory
 {
     auto processor = std::make_shared<Vst3xWrapper>(host_control,
                                                     plugin_info.path,
-                                                    plugin_info.uid,
-                                                    _host_app.get());
+                                                    plugin_info.uid);
     auto processor_status = processor->init(sample_rate);
     return {processor_status, processor};
 }
