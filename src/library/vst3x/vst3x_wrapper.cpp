@@ -86,7 +86,9 @@ Vst3xWrapper::~Vst3xWrapper()
 ProcessorReturnCode Vst3xWrapper::init(float sample_rate)
 {
     _sample_rate = sample_rate;
-    bool loaded = _instance.load_plugin(_host_control.to_absolute_path(_plugin_load_path), _plugin_load_name);
+    bool loaded = _instance.load_plugin(_host_control.to_absolute_path(_plugin_load_path),
+                                        _plugin_load_name,
+                                        &_component_handler);
     if (!loaded)
     {
         _cleanup();
@@ -610,12 +612,7 @@ ProcessorReturnCode Vst3xWrapper::_setup()
     {
         return ProcessorReturnCode::PLUGIN_INIT_ERROR;
     }
-    auto res = _instance.controller()->setComponentHandler(&_component_handler);
-    if (res != Steinberg::kResultOk)
-    {
-        ELKLOG_LOG_ERROR("Failed to set component handler with error code: {}", res);
-        return ProcessorReturnCode::PLUGIN_INIT_ERROR;
-    }
+
     if (!_sync_processor_to_controller())
     {
         ELKLOG_LOG_WARNING("failed to sync controller");
@@ -625,8 +622,10 @@ ProcessorReturnCode Vst3xWrapper::_setup()
     {
         return ProcessorReturnCode::PLUGIN_INIT_ERROR;
     }
+
     _register_parameters();
     _register_properties();
+
     if (!_setup_internal_program_handling())
     {
         _setup_file_program_handling();
@@ -781,7 +780,7 @@ bool Vst3xWrapper::_register_properties()
             PropertyInfo config = {.automatable = !read_only, .audio_thread_notification = audio_thread_notification};
             _property_configs[info.id] = config;
             _parameters_by_vst3_id[param->id()] = param;
-            ELKLOG_LOG_DEBUG("Registered string property \"{}\"\" {} ", name, read_only? "as read only" : "");
+            ELKLOG_LOG_INFO("Registered string property \"{}\"\" {} ", name, read_only? "as read only" : "");
         }
     }
     return true;

@@ -26,10 +26,11 @@ public:
     bool inject_plugin(Steinberg::Vst::IComponent* component, const std::string& name, float sample_rate)
     {
         _friend._sample_rate = sample_rate;
-        bool loaded = _friend._instance.load_plugin_from_component(component,name);
+        bool loaded = _friend._instance.load_plugin_from_component(component,
+                                                                   name,
+                                                                   &_friend._component_handler);
         if (!loaded)
         {
-            std::cout << "Failed to load" << std::endl;
             _friend._cleanup();
             return false;
         }
@@ -39,7 +40,6 @@ public:
         auto res = _friend._setup();
         if (res != ProcessorReturnCode::OK)
         {
-            std::cout << "Failed to setup " << (int)res << std::endl;
             return false;
         }
         return true;
@@ -115,7 +115,7 @@ TEST(TestVst3xPluginInstance, TestLoadPlugin)
 
     SushiHostApplication host_app(nullptr);
     PluginInstance module_under_test(&host_app);
-    bool success = module_under_test.load_plugin(full_test_plugin_path, PLUGIN_NAME);
+    bool success = module_under_test.load_plugin(full_test_plugin_path, PLUGIN_NAME, nullptr);
     ASSERT_TRUE(success);
     ASSERT_TRUE(module_under_test.processor());
     ASSERT_TRUE(module_under_test.component());
@@ -128,14 +128,14 @@ TEST(TestVst3xPluginInstance, TestLoadPluginFromErroneousFilename)
     /* Non-existing library */
     SushiHostApplication host_app(nullptr);
     PluginInstance module_under_test(&host_app);
-    bool success = module_under_test.load_plugin("/usr/lib/lxvst/no_plugin.vst3", PLUGIN_NAME);
+    bool success = module_under_test.load_plugin("/usr/lib/lxvst/no_plugin.vst3", PLUGIN_NAME, nullptr);
     ASSERT_FALSE(success);
 
     /* Existing library but non-existing plugin */
     auto full_path = std::filesystem::path(SUSHI_VST3_TEST_PLUGIN_PATH);
     auto full_test_plugin_path = std::filesystem::absolute(full_path).string();
 
-    success = module_under_test.load_plugin(full_test_plugin_path, "NoPluginWithThisName");
+    success = module_under_test.load_plugin(full_test_plugin_path, "NoPluginWithThisName", nullptr);
     ASSERT_FALSE(success);
 }
 

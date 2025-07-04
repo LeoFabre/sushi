@@ -218,7 +218,7 @@ PluginInstance::~PluginInstance()
     }
 }
 
-bool PluginInstance::load_plugin(const std::string& plugin_path, const std::string& plugin_name)
+bool PluginInstance::load_plugin(const std::string& plugin_path, const std::string& plugin_name, Steinberg::Vst::IComponentHandler* component_handler)
 {
     std::string error_msg;
     _module = VST3::Hosting::Module::create(plugin_path, error_msg);
@@ -275,6 +275,13 @@ bool PluginInstance::load_plugin(const std::string& plugin_path, const std::stri
         return false;
     }
 
+    res = controller->setComponentHandler(component_handler);
+    if (res != Steinberg::kResultOk)
+    {
+        ELKLOG_LOG_ERROR("Failed to set component handler with error code: {}", res);
+        return false;
+    }
+
     _component = component;
     _processor = processor;
     _controller = controller;
@@ -289,7 +296,9 @@ bool PluginInstance::load_plugin(const std::string& plugin_path, const std::stri
     return true;
 }
 
-bool PluginInstance::load_plugin_from_component(Steinberg::Vst::IComponent* component, const std::string& plugin_name)
+bool PluginInstance::load_plugin_from_component(Steinberg::Vst::IComponent* component,
+                                                const std::string& plugin_name,
+                                                Steinberg::Vst::IComponentHandler* component_handler)
 {
     assert(component);
     auto res = component->initialize(static_cast<Steinberg::Vst::IHostApplication*>(_host_app));
@@ -310,6 +319,13 @@ bool PluginInstance::load_plugin_from_component(Steinberg::Vst::IComponent* comp
         ELKLOG_LOG_ERROR("Failed to get controller from component");
         return false;
     }
+    res = controller->setComponentHandler(component_handler);
+    if (res != Steinberg::kResultOk)
+    {
+        ELKLOG_LOG_ERROR("Failed to set component handler with error code: {}", res);
+        return false;
+    }
+
     _component = component;
     _processor = processor;
     _controller = controller;
@@ -348,7 +364,7 @@ void PluginInstance::_query_extension_interfaces()
     }
 
     auto controller_extension = query_vst_interface<elk::IElkControllerExtension>(_controller.get());
-    if (processor_extension)
+    if (controller_extension)
     {
         _elk_controller_extension = controller_extension;
         ELKLOG_LOG_INFO("Plugin supports Elk Controller Extension");

@@ -1,9 +1,4 @@
-//
-// Created by Gustav Andersson on 2025-06-25.
-//
-
 #ifdef SUSHI_BUILD_WITH_VST3
-#include <iostream>
 
 #include "vst3_test_plugin.h"
 #include "library/vst3x/vst3x_utils.h"
@@ -29,7 +24,6 @@ Vst3TestPlugin::Vst3TestPlugin()
     VST3::StringConvert::convert("Property 2", info.label);
     info.flags = elk::PropertyInfo::kIsReadOnly;
     _string_properties[1] = info;
-
 }
 
 Steinberg::int32 test_callback(void* data, Steinberg::uint16 id)

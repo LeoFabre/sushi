@@ -116,7 +116,7 @@ public:
      * @param plugin_name Name of the plugin to load from the file, vst3 allows you to pack multiple plugins in one file/bundle
      * @return True if successful, false otherwise
      */
-    bool load_plugin(const std::string& plugin_path, const std::string& plugin_name);
+    bool load_plugin(const std::string& plugin_path, const std::string& plugin_name, Steinberg::Vst::IComponentHandler* component_handler);
 
     /**
      * @brief Load a plugin from an already instantiated component. This assumes the plugin is built from SingleComponentEffect
@@ -124,7 +124,7 @@ public:
      * @param plugin_name Name of the plugin to load
      * @return True if successful, false otherwise
      */
-    bool load_plugin_from_component(Steinberg::Vst::IComponent* component, const std::string& plugin_name);
+    bool load_plugin_from_component(Steinberg::Vst::IComponent* component, const std::string& plugin_name, Steinberg::Vst::IComponentHandler* component_handler);
 
     [[nodiscard]] const std::string& name() const {return _name;}
     [[nodiscard]] const std::string& vendor() const {return _vendor;}
