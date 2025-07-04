@@ -3,6 +3,8 @@
 
 #ifdef SUSHI_BUILD_WITH_VST3
 
+#include <array>
+
 #include "pluginterfaces/base/funknownimpl.h"
 #include "public.sdk/source/vst/vstsinglecomponenteffect.h"
 #include "library/vst3x/vst3x_extensions.h"
@@ -17,7 +19,6 @@ public:
     Vst3TestPlugin();
     ~Vst3TestPlugin();
 
-    static constexpr size_t FLOAT_PARAMETERS = 2;
     static constexpr size_t STRING_PROPERTIES = 2;
     static constexpr int PROPERTY_ID_1 = 5;
     static constexpr int PROPERTY_ID_2 = 7;

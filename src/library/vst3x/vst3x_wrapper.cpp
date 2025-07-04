@@ -19,8 +19,6 @@
  */
 
 #include <string>
-#include <iostream>
-
 
 #include "elk-warning-suppressor/warning_suppressor.hpp"
 

@@ -4,8 +4,10 @@ New Features:
   * Send and return plugins are now zero delay under some conditions
   * Updated vcpkg
   * Send and return plugins are now zero-delay if on the same cpu core
+  * Vst3 extension apis
   * Updated gRPC api with versioning and command completion notifications
   * Updated example config files to use initial state instead of events
+  * String properties can now be output only, i.e. not settable by Sushi
 
 Fixes:
   * Warning if multiple twine workers are allocated to the same cpu core

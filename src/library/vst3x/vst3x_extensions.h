@@ -46,7 +46,6 @@ struct PropertyInfo
         kNoFlags		    = 0,		///< no flags wanted
         kIsReadOnly		    = 1 << 0,	///< parameter cannot be changed from outside the plug-in (implies that kCanAutomate is NOT set)
         kAudioThreadNotify	= 1 << 1,	///< if the host set the property IElkProcessorExtension::propertyValueChanged() will be called in the audio thread
-        kIdChangeAllowed    = 1 << 2,	///< if the id is already taken by another parameter, the host may change it
     };
 };
 
