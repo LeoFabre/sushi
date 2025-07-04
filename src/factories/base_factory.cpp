@@ -107,11 +107,6 @@ void BaseFactory::_instantiate_subsystems(SushiOptions& options)
         _engine->set_base_plugin_path(options.base_plugin_path);
     }
 
-    if (options.enable_timings)
-    {
-        _engine->performance_timer()->enable(true);
-    }
-
     _midi_dispatcher = std::make_unique<midi_dispatcher::MidiDispatcher>(_engine->event_dispatcher());
 
     if (options.config_source == ConfigurationSource::FILE)
@@ -125,6 +120,11 @@ void BaseFactory::_instantiate_subsystems(SushiOptions& options)
     else if (options.config_source == ConfigurationSource::NONE)
     {
         _status = _configure_with_defaults(options);
+    }
+
+    if (_status == Status::OK)
+    {
+        _status = _configure_timing_options(options);
     }
 }
 
@@ -185,6 +185,26 @@ Status BaseFactory::_configure_with_defaults(SushiOptions& options)
     control_config.cv_outputs = 0;
 
     return _configure_engine(options, control_config, nullptr); // nullptr for configurator
+}
+
+Status BaseFactory::_configure_timing_options(const SushiOptions& options)
+{
+    if (options.enable_timings || !options.detailed_timing_log.empty())
+    {
+        _engine->performance_timer()->enable(true);
+        for (const auto& name : options.detailed_timing_log)
+        {
+            auto processor = _engine->processor_container()->processor(name);
+            if (!processor)
+            {
+                ELKLOG_LOG_INFO("Processor {} not found", name);
+                return Status::FAILED_LOAD_TRACKS;
+            }
+            _engine->performance_timer()->enable_detailed_timings(processor->id(), true);
+            ELKLOG_LOG_INFO("Enabled detailed timing logging for processor {} ({})", name, processor->id());
+        }
+    }
+    return Status::OK;
 }
 
 Status BaseFactory::_configure_engine(SushiOptions& options,

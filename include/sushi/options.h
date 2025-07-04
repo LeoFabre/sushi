@@ -154,6 +154,7 @@ enum OptionIndex
     OPT_IDX_XENOMAI_DEBUG_MODE_SW,
     OPT_IDX_MULTICORE_PROCESSING,
     OPT_IDX_TIMINGS_STATISTICS,
+    OPT_IDX_DETAILED_TIMINGS,
     OPT_IDX_OSC_RECEIVE_PORT,
     OPT_IDX_OSC_SEND_PORT,
     OPT_IDX_OSC_SEND_IP,
@@ -408,6 +409,14 @@ const optionparser::Descriptor usage[] =
         "timing-statistics",
         SushiArg::Optional,
         "\t\t--timing-statistics \tEnable performance timings on all audio processors."
+    },
+    {
+        OPT_IDX_DETAILED_TIMINGS,
+        OPT_TYPE_UNUSED,
+        "",
+        "detailed-timings",
+        SushiArg::NonEmpty,
+        "\t\t--detailed-timings \tRecord timings for all audio callbacks for the given processor name. Use only for debug purposes as it will record significant amounts of data. Multiple processor names may be passed separated by semicolon"
     },
     {
         OPT_IDX_OSC_RECEIVE_PORT,

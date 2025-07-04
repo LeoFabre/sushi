@@ -52,6 +52,7 @@ AudioFrontendStatus PortAudioFrontend::init(BaseAudioFrontendConfiguration*)
 #endif
 
 #include "concrete_sushi.cpp"
+#include "sushi/terminal_utilities.h"
 #include "factories/base_factory.cpp"
 #include "factories/offline_factory.cpp"
 #include "factories/offline_factory_implementation.cpp"
@@ -72,6 +73,27 @@ using ::testing::_;
 
 namespace sushi::internal
 {
+
+TEST (TestTerminalUtils, TestStringTokenizer)
+{
+    auto args = sushi::tokenize_arg("one:two:three", ':');
+    GTEST_ASSERT_EQ(3, args.size());
+    GTEST_ASSERT_EQ("one", args[0]);
+    GTEST_ASSERT_EQ("two", args[1]);
+    GTEST_ASSERT_EQ("three", args[2]);
+
+    args = sushi::tokenize_arg("single", ',');
+    GTEST_ASSERT_EQ(1, args.size());
+    GTEST_ASSERT_EQ("single", args.front());
+
+    args = sushi::tokenize_arg(":one:two::", ':');
+    GTEST_ASSERT_EQ(5, args.size());
+    GTEST_ASSERT_EQ("", args[0]);
+    GTEST_ASSERT_EQ("one", args[1]);
+    GTEST_ASSERT_EQ("two", args[2]);
+    GTEST_ASSERT_EQ("", args[3]);
+    GTEST_ASSERT_EQ("", args[4]);
+}
 
 class ConcreteSushiAccessor
 {
