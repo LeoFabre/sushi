@@ -26,11 +26,11 @@ endif()
 #  VST3SDK and examples  #
 ##########################
 if (${SUSHI_WITH_VST3})
-    set(vstsdk_VERSION 3.7.6)
+    set(vstsdk_VERSION 3.8.0)
 
     # Exclude VstGui, hosting samples and skip validation
-    set(SMTG_ADD_VSTGUI OFF CACHE BOOL "" FORCE)
-    set(SMTG_ADD_VST3_HOSTING_SAMPLES OFF CACHE BOOL "" FORCE)
+    set(SMTG_ENABLE_VSTGUI_SUPPORT OFF CACHE BOOL "" FORCE)
+    set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(SMTG_RUN_VST_VALIDATOR OFF CACHE BOOL "" FORCE)
     set(SMTG_CREATE_PLUGIN_LINK OFF CACHE BOOL "" FORCE)
 
@@ -40,7 +40,7 @@ if (${SUSHI_WITH_VST3})
     endif()
 
     # VST3 example plugins are needed by unit tests
-    set(SMTG_ADD_VST3_PLUGINS_SAMPLES ON CACHE BOOL "" FORCE)
+    set(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES ON CACHE BOOL "" FORCE)
 
     # Don't install example plugins in ~/.vst3, keep them in the build directory
     set(SMTG_PLUGIN_TARGET_PATH ${CMAKE_CURRENT_BINARY_DIR}/vst3sdk/VST3 CACHE STRING "" FORCE)
@@ -56,7 +56,7 @@ if (${SUSHI_WITH_VST3})
 
     add_subdirectory(vst3sdk)
 
-    # vst3sdk overrides SMTG_ADD_VST3_PLUGINS_SAMPLES if the sdk is included as a submodule.
+    # vst3sdk overrides SMTG_ENABLE_VST3_PLUGIN_EXAMPLES if the sdk is included as a submodule.
     # So, we need to manually add adelay, as it is used by sushi unit tests.
     # We also need to redo some Steinberg initialisation.
 
@@ -89,8 +89,7 @@ if (${SUSHI_WITH_VST3})
         endif()
     endif()
 
-    if (SMTG_ADD_VST3_PLUGINS_SAMPLES)
-        add_subdirectory(vst3sdk/public.sdk/samples/vst)
+    if (SMTG_ENABLE_VST3_PLUGIN_EXAMPLES)
         set_target_properties(mda-vst3 PROPERTIES COMPILE_FLAGS ${VST3_COMPILE_FLAGS})
         set_target_properties(base PROPERTIES COMPILE_FLAGS ${VST3_COMPILE_FLAGS})
         set_target_properties(adelay PROPERTIES COMPILE_FLAGS ${VST3_COMPILE_FLAGS})
