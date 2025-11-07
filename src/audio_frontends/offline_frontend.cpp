@@ -134,7 +134,7 @@ void OfflineFrontend::add_sequencer_events(std::vector<std::unique_ptr<Event>> e
     // Sort events by reverse time
     std::sort(events.begin(), events.end(), [](const std::unique_ptr<Event>& lhs, const std::unique_ptr<Event>& rhs)
                                               {
-                                                  return lhs->time() >= rhs->time();
+                                                  return lhs->time() > rhs->time();
                                               });
     _event_queue = std::move(events);
 }
