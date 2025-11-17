@@ -74,7 +74,7 @@ void DrivePlugin::set_enabled(bool enabled)
     bw_drive_reset_coeffs(&_drive_coeffs);
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_drive_reset_state(&_drive_coeffs, &_drive_states[i]);
+        bw_drive_reset_state(&_drive_coeffs, &_drive_states[i], 0.0f);
         bw_src_int_reset_state(&_src_up_coeffs, &_src_up_states[i], 0.0f);
         bw_src_int_reset_state(&_src_down_coeffs, &_src_down_states[i], 0.0f);
     }

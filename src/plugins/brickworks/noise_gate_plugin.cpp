@@ -76,7 +76,7 @@ void NoiseGatePlugin::set_enabled(bool enabled)
     bw_noise_gate_reset_coeffs(&_noise_gate_coeffs);
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_noise_gate_reset_state(&_noise_gate_coeffs, &_noise_gate_states[i]);
+        bw_noise_gate_reset_state(&_noise_gate_coeffs, &_noise_gate_states[i], 0.0f, 0.0f);
     }
 }
 

@@ -67,7 +67,7 @@ void TremoloPlugin::set_enabled(bool enabled)
     bw_trem_reset_coeffs(&_trem_coeffs);
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_trem_reset_state(&_trem_coeffs, &_trem_states[i]);
+        bw_trem_reset_state(&_trem_coeffs, &_trem_states[i], 0.0f);
     }
 }
 

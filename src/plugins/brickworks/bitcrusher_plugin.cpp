@@ -62,7 +62,7 @@ void BitcrusherPlugin::set_enabled(bool enabled)
     bw_bd_reduce_reset_coeffs(&_bd_reduce_coeffs);
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_sr_reduce_reset_state(&_sr_reduce_coeffs, &_sr_reduce_states[i]);
+        bw_sr_reduce_reset_state(&_sr_reduce_coeffs, &_sr_reduce_states[i], 0.0f);
     }
 }
 

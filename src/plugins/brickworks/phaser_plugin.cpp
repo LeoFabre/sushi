@@ -72,7 +72,7 @@ void PhaserPlugin::set_enabled(bool enabled)
     bw_phaser_reset_coeffs(&_phaser_coeffs);
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_phaser_reset_state(&_phaser_coeffs, &_phaser_states[i]);
+        bw_phaser_reset_state(&_phaser_coeffs, &_phaser_states[i], 0.0f);
     }
 }
 

@@ -84,7 +84,7 @@ void CompressorPlugin::set_enabled(bool enabled)
     bw_comp_reset_coeffs(&_compressor_coeffs);
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_comp_reset_state(&_compressor_coeffs, &_compressor_state[i]);
+        bw_comp_reset_state(&_compressor_coeffs, &_compressor_state[i], 0.0f, 0.0f);
     }
 }
 

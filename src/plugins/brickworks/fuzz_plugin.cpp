@@ -69,7 +69,7 @@ void FuzzPlugin::set_enabled(bool enabled)
     bw_fuzz_reset_coeffs(&_fuzz_coeffs);
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_fuzz_reset_state(&_fuzz_coeffs, &_fuzz_states[i]);
+        bw_fuzz_reset_state(&_fuzz_coeffs, &_fuzz_states[i], 0.0f);
         bw_src_int_reset_state(&_src_up_coeffs, &_src_up_states[i], 0.0f);
         bw_src_int_reset_state(&_src_down_coeffs, &_src_down_states[i], 0.0f);
     }

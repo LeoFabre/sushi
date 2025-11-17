@@ -80,11 +80,11 @@ void FlangerPlugin::set_enabled(bool enabled)
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
         _delay_mem_areas[i].resize(bw_chorus_mem_req(&_chorus_coeffs));
-        bw_chorus_mem_set(&_chorus_states[i], _delay_mem_areas[i].data());
+        bw_chorus_mem_set(&_chorus_coeffs, &_chorus_states[i], _delay_mem_areas[i].data());
     }
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_chorus_reset_state(&_chorus_coeffs, &_chorus_states[i]);
+        bw_chorus_reset_state(&_chorus_coeffs, &_chorus_states[i], 0.0f);
     }
 }
 

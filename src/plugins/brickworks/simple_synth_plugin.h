@@ -67,7 +67,7 @@ private:
 
     void _render_loop(int offset, int n);
 
-    void _change_active_note(int notenum);
+    void _update_note_gate();
 
     ChunkSampleBuffer _render_buffer {1};
     ChunkSampleBuffer _aux_buffer {1};
@@ -93,7 +93,9 @@ private:
 
     RtSafeRtEventFifo _event_fifo;
     std::array<bool, MAX_MIDI_NOTE> _held_notes {false};
-    int _highest_held_note {-1};
+    int _note {69};
+    char _gate {0};
+    float _freq {440.0f};
 };
 
 } // namespace sushi::internal::simple_synth_plugin

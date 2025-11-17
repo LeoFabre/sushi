@@ -68,7 +68,7 @@ void ClipPlugin::set_enabled(bool enabled)
     bw_clip_reset_coeffs(&_clip_coeffs);
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_clip_reset_state(&_clip_coeffs, &_clip_states[i]);
+        bw_clip_reset_state(&_clip_coeffs, &_clip_states[i], 0.0f);
         bw_src_int_reset_state(&_src_up_coeffs, &_src_up_states[i], 0.0f);
         bw_src_int_reset_state(&_src_down_coeffs, &_src_down_states[i], 0.0f);
     }
