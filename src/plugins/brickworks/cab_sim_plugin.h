@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 Elk Audio AB
+ * Copyright 2017-2025 Elk Audio AB
  *
  * SUSHI is free software: you can redistribute it and/or modify it under the terms of
  * the GNU Affero General Public License as published by the Free Software Foundation,
@@ -15,7 +15,7 @@
 
 /**
  * @brief Cabinet simulator from Brickworks library
- * @copyright 2017-2023 Elk Audio AB, Stockholm
+ * @copyright 2017-2025 Elk Audio AB, Stockholm
  */
 
 #ifndef CAB_SIM_PLUGIN_H

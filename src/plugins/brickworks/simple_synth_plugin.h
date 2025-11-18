@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 Elk Audio AB, Stockholm
+ * Copyright 2017-2025 Elk Audio AB, Stockholm
  *
  * SUSHI is free software: you can redistribute it and/or modify it under the terms of
  * the GNU Affero General Public License as published by the Free Software Foundation,
@@ -15,7 +15,7 @@
 
 /**
  * @brief Simple monophonic synthesizer from Brickworks library
- * @copyright 2017-2023 Elk Audio AB, Stockholm
+ * @copyright 2017-2025 Elk Audio AB, Stockholm
  */
 
 #ifndef SUSHI_SIMPLE_SYNTH_PLUGIN_H
