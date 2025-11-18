@@ -646,6 +646,7 @@ set(SOURCE_FILES
     src/plugins/mono_summing_plugin.cpp
     src/plugins/stereo_mixer_plugin.cpp
     src/plugins/brickworks/compressor_plugin.cpp
+    src/plugins/brickworks/cab_sim_plugin.cpp
     src/plugins/brickworks/bitcrusher_plugin.cpp
     src/plugins/brickworks/wah_plugin.cpp
     src/plugins/brickworks/eq3band_plugin.cpp

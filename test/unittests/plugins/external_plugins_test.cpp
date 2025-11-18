@@ -14,6 +14,7 @@
 
 #include "plugins/brickworks/bitcrusher_plugin.h"
 #include "plugins/brickworks/compressor_plugin.cpp"
+#include "plugins/brickworks/cab_sim_plugin.cpp"
 #include "plugins/brickworks/bitcrusher_plugin.cpp"
 #include "plugins/brickworks/wah_plugin.cpp"
 #include "plugins/brickworks/eq3band_plugin.cpp"
@@ -221,6 +222,7 @@ void test_fx_plugin_instantiation(const std::string& uid,
         test_fx_plugin_buffers_not_overflow(plugin_uid);\
     }
 
+EXTERNAL_PLUGIN_TEST_CASES(CabSim, "sushi.brickworks.cab_sim", "Cab Simulator", 1.0e-4f)
 EXTERNAL_PLUGIN_TEST_CASES(Chorus, "sushi.brickworks.chorus", "Chorus", 1.0e-4f)
 EXTERNAL_PLUGIN_TEST_CASES(Clip, "sushi.brickworks.clip", "Clip", 1.0e-2f)
 EXTERNAL_PLUGIN_TEST_CASES(CombDelay,"sushi.brickworks.comb_delay", "Comb Delay", 1.0e-4f)

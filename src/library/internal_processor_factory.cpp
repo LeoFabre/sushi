@@ -35,6 +35,7 @@
 #include "plugins/freeverb_plugin.h"
 
 #include "plugins/brickworks/compressor_plugin.h"
+#include "plugins/brickworks/cab_sim_plugin.h"
 #include "plugins/brickworks/bitcrusher_plugin.h"
 #include "plugins/brickworks/wah_plugin.h"
 #include "plugins/brickworks/eq3band_plugin.h"
@@ -107,6 +108,7 @@ InternalProcessorFactory::InternalProcessorFactory() : _send_return_factory(std:
     _add(std::make_unique<InternalFactory<stereo_mixer_plugin::StereoMixerPlugin>>());
     _add(std::make_unique<InternalFactory<freeverb_plugin::FreeverbPlugin>>());
     _add(std::make_unique<InternalFactory<compressor_plugin::CompressorPlugin>>());
+    _add(std::make_unique<InternalFactory<cab_sim_plugin::CabSimPlugin>>());
     _add(std::make_unique<InternalFactory<bitcrusher_plugin::BitcrusherPlugin>>());
     _add(std::make_unique<InternalFactory<wah_plugin::WahPlugin>>());
     _add(std::make_unique<InternalFactory<eq3band_plugin::Eq3bandPlugin>>());
