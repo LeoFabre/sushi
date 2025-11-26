@@ -1,7 +1,7 @@
 # Only use spaces to indent your .yml configuration.
 # -----
 # You can specify a custom docker image from Docker Hub as your build environment.
-image: ubuntu:22.04
+image: ubuntu:24.04
 
 pipelines:
   default:
@@ -33,6 +33,8 @@ pipelines:
           - git submodule update --init --recursive
           # Set test data dir (for running unit test manually)
           - export SUSHI_TEST_DATA_DIR=$PWD/test/data
+          # Set the number of cores to use when building
+          - export BUILD_CORES=8
           # Boostrap vcpkg
           - export VCPKG_BINARY_SOURCES="clear;files,$(pwd)/vcpkgcache,readwrite"
           - ./third-party/vcpkg/bootstrap-vcpkg.sh
@@ -81,7 +83,3 @@ pipelines:
 definitions:
   caches:
     vcpkg: vcpkgcache
-
-  variables:
-    - name: BUILD_CORES
-      default: 8
