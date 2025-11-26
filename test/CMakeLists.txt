@@ -220,6 +220,8 @@ if (${SUSHI_WITH_LV2})
         GIT_TAG a89d5691465a065146ecf14737a00fa0ddefd25c
         PREFIX ${CMAKE_BINARY_DIR}/lv2_examples
         CONFIGURE_COMMAND meson setup <BINARY_DIR> <SOURCE_DIR>
+                            --prefix=/
+                            -Dlv2dir=lv2
         BUILD_COMMAND meson compile -C <BINARY_DIR>
         INSTALL_COMMAND meson install -C <BINARY_DIR> --destdir <INSTALL_DIR>
     )
@@ -293,7 +295,7 @@ else()
                       ${CMAKE_COMMAND}
                       -E env
                         "SUSHI_TEST_DATA_DIR=${PROJECT_SOURCE_DIR}/test/data"
-                        "LV2_PATH=${PROJECT_BINARY_DIR}/lv2_examples/usr/local/lib/lv2"
+                        "LV2_PATH=${PROJECT_BINARY_DIR}/lv2_examples/lv2"
                       "$<TARGET_FILE:unit_tests>")
     add_dependencies(run_tests unit_tests)
 endif()
