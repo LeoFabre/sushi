@@ -210,8 +210,19 @@ endif()
 if (${SUSHI_WITH_LV2})
     set(TEST_FILES ${TEST_FILES} unittests/library/lv2_wrapper_test.cpp)
     set(TEST_COMPILE_DEFINITIONS ${TEST_COMPILE_DEFINITIONS} -DSUSHI_BUILD_WITH_LV2)
-    set(TEST_LINK_LIBRARIES ${TEST_LINK_LIBRARIES} asound lilv-0 lv2_host)
+    set(TEST_LINK_LIBRARIES ${TEST_LINK_LIBRARIES} PkgConfig::LILV lv2_host)
     set(TEST_DEPENDENCIES ${TEST_DEPENDENCIES} lv2_host)
+
+    include(ExternalProject)
+
+    ExternalProject_Add(lv2_examples
+        GIT_REPOSITORY https://github.com/lv2/lv2-examples.git
+        GIT_TAG a89d5691465a065146ecf14737a00fa0ddefd25c
+        PREFIX ${CMAKE_BINARY_DIR}/lv2_examples
+        CONFIGURE_COMMAND meson setup <BINARY_DIR> <SOURCE_DIR>
+        BUILD_COMMAND meson compile -C <BINARY_DIR>
+        INSTALL_COMMAND meson install -C <BINARY_DIR> --destdir <INSTALL_DIR>
+    )
 endif()
 
 if (${SUSHI_WITH_LV2_MDA_TESTS})
@@ -280,7 +291,9 @@ if(CMAKE_CROSSCOMPILING)
 else()
     add_custom_target(run_tests ALL
                       ${CMAKE_COMMAND}
-                      -E env "SUSHI_TEST_DATA_DIR=${PROJECT_SOURCE_DIR}/test/data"
+                      -E env
+                        "SUSHI_TEST_DATA_DIR=${PROJECT_SOURCE_DIR}/test/data"
+                        "LV2_PATH=${PROJECT_BINARY_DIR}/lv2_examples/usr/local/lib/lv2"
                       "$<TARGET_FILE:unit_tests>")
     add_dependencies(run_tests unit_tests)
 endif()
