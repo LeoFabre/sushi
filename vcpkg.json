@@ -17,6 +17,7 @@
     "rtmidi",
     "lv2",
     "lilv",
-    "sentry-native"
+    "sentry-native",
+    { "name": "pkgconf", "platform": "windows" }
   ]
 }
