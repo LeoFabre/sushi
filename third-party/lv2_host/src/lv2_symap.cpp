@@ -51,12 +51,12 @@ struct SymapImpl
     /**
        Array of IDs, sorted by corresponding string in `symbols`.
     */
-    u_int32_t *index;
+    uint32_t *index;
 
     /**
        Number of symbols (number of items in `symbols` and `index`).
     */
-    u_int32_t size;
+    uint32_t size;
 };
 
 Symap* symap_new(void)

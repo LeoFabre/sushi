@@ -129,10 +129,13 @@ protected:
 
 TEST_F(TestLv2Wrapper, TestLV2PluginInvalidURI)
 {
+    // Closing stderr causes a crash on Windows when code later tries to output to it.
+#ifndef _MSC_VER
     // Closing console error output temporarily.
     // Lilv complains the URI is invalid, as it should.
     // We don't need that to pollute our unit test output.
     fclose(stderr);
+#endif
 
     auto ret = SetUp("This URI surely does not exist.");
 

@@ -1,0 +1,13 @@
+∩╗┐diff --git a/third-party/vst3sdk/pluginterfaces/base/fplatform.h b/third-party/vst3sdk/pluginterfaces/base/fplatform.h
+index 53ac5c0..822a8c8 100644
+--- a/third-party/vst3sdk/pluginterfaces/base/fplatform.h
++++ b/third-party/vst3sdk/pluginterfaces/base/fplatform.h
+@@ -107,7 +107,7 @@
+ 		#define SMTG_CPP11_STDLIBSUPPORT SMTG_CPP11
+ 		#define SMTG_CPP14 (__cplusplus >= 201402L || ((_MSC_FULL_VER >= 190024210L) && (_MSVC_LANG >= 201402L)))
+ 		#define SMTG_CPP17 (__cplusplus >= 201703L || ((_MSC_FULL_VER >= 190024210L) && (_MSVC_LANG >= 201703L)))
+-		#define SMTG_CPP20 (__cplusplus >= 202002L)
++		#define SMTG_CPP20 (__cplusplus >= 202002L || ((_MSC_FULL_VER >= 190024210L) && (_MSVC_LANG >= 202002L)))
+ 		#define SMTG_CPP23 (__cplusplus >= 202302L)
+ 		#define SMTG_HAS_NOEXCEPT ((_MSC_FULL_VER >= 190023026L) || (SMTG_INTEL_CXX11_MODE && SMTG_INTEL_COMPILER >= 1300))
+ 		#if ((_MSC_FULL_VER >= 190024210L) || (SMTG_INTEL_CXX11_MODE && SMTG_INTEL_COMPILER >= 1500) || (defined (__MINGW32__) && SMTG_CPP11))

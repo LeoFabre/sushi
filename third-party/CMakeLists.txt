@@ -95,6 +95,14 @@ if (${SUSHI_WITH_VST3})
         set_target_properties(adelay PROPERTIES COMPILE_FLAGS ${VST3_COMPILE_FLAGS})
     endif()
 
+    if (MSVC)
+        # don't check the return code as this will fail if the patch is already applied
+        execute_process(
+            COMMAND git apply ${CMAKE_SOURCE_DIR}/third-party/vst3sdk.windows.patch
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        )
+    endif()
+
 endif()
 
 set(FREEVERB_UNDENORMALIZE OFF CACHE BOOL "" FORCE)
@@ -102,6 +110,11 @@ add_subdirectory(freeverb)
 
 if (SUSHI_WITH_PORTAUDIO)
     add_subdirectory(portaudio)
+
+    # ASIO doesn't support unicode
+    if (MSVC)
+        target_compile_options(PortAudio PRIVATE /U_UNICODE /UUNICODE)
+    endif()
 endif()
 #####################################################
 #  External Projects definitions (non-Cmake based)  #
