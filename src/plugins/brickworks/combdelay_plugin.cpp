@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 Elk Audio AB
+ * Copyright 2017-2025 Elk Audio AB
  *
  * SUSHI is free software: you can redistribute it and/or modify it under the terms of
  * the GNU Affero General Public License as published by the Free Software Foundation,
@@ -15,7 +15,7 @@
 
 /**
  * @brief Comb delay from Brickworks library
- * @copyright 2017-2023 Elk Audio AB, Stockholm
+ * @copyright 2017-2025 Elk Audio AB, Stockholm
  */
 
 #include <cassert>
@@ -85,11 +85,11 @@ void CombPlugin::set_enabled(bool enabled)
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
         _delay_mem_areas[i].resize(bw_comb_mem_req(&_comb_coeffs));
-        bw_comb_mem_set(&_comb_states[i], _delay_mem_areas[i].data());
+        bw_comb_mem_set(&_comb_coeffs, &_comb_states[i], _delay_mem_areas[i].data());
     }
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_comb_reset_state(&_comb_coeffs, &_comb_states[i]);
+        bw_comb_reset_state(&_comb_coeffs, &_comb_states[i], 0.0f);
     }
 }
 

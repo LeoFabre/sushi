@@ -14,68 +14,74 @@
  */
 
 /**
- * @brief Notch from Brickworks library
- * @copyright 2017-2025 Elk Audio AB, Stockholm
+ * @brief Cabinet simulator from Brickworks library
+ * @copyright 2017-2025, Elk Audio AB, Stockholm
  */
 
 #include <cassert>
 
-#include "notch_plugin.h"
+#include "cab_sim_plugin.h"
 
-namespace sushi::internal::notch_plugin {
+namespace sushi::internal::cab_sim_plugin {
 
-constexpr auto PLUGIN_UID = "sushi.brickworks.notch";
-constexpr auto DEFAULT_LABEL = "Notch";
+constexpr auto PLUGIN_UID = "sushi.brickworks.cab_sim";
+constexpr auto DEFAULT_LABEL = "Cab Simulator";
 
 
-NotchPlugin::NotchPlugin(HostControl host_control) : InternalPlugin(host_control)
+CabSimPlugin::CabSimPlugin(HostControl host_control) : InternalPlugin(host_control)
 {
     _max_input_channels = MAX_TRACK_CHANNELS;
     _max_output_channels = MAX_TRACK_CHANNELS;
     Processor::set_name(PLUGIN_UID);
     Processor::set_label(DEFAULT_LABEL);
 
-    _frequency = register_float_parameter("frequency", "Frequency", "Hz",
-                                          1'000.0f, 20.0f, 20'000.0f,
-                                          Direction::AUTOMATABLE,
-                                          new CubicWarpPreProcessor(20.0f, 20'000.0f));
-    _Q = register_float_parameter("Q", "Q", "",
-                                  1.0f, 0.5f, 10.0f,
-                                  Direction::AUTOMATABLE,
-                                  new FloatParameterPreProcessor(0.5f, 10.0f));
+    _cutoff_low = register_float_parameter("cutoff_low", "Cutoff Low", "",
+                                           0.5f, 0.0f, 1.0f,
+                                           Direction::AUTOMATABLE,
+                                           new FloatParameterPreProcessor(0.0f, 1.0f));
+    _cutoff_high = register_float_parameter("cutoff_high", "Cutoff High", "",
+                                            0.5f, 0.0f, 1.0f,
+                                            Direction::AUTOMATABLE,
+                                            new FloatParameterPreProcessor(0.0f, 1.0f));
+    _tone = register_float_parameter("tone", "Tone", "",
+                                     0.5f, 0.0f, 1.0f,
+                                     Direction::AUTOMATABLE,
+                                     new FloatParameterPreProcessor(0.0f, 1.0f));
 
-    assert(_frequency);
-    assert(_Q);
+    assert(_cutoff_low);
+    assert(_cutoff_high);
+    assert(_tone);
 }
 
-ProcessorReturnCode NotchPlugin::init(float sample_rate)
+ProcessorReturnCode CabSimPlugin::init(float sample_rate)
 {
-    bw_notch_init(&_notch_coeffs);
-    configure(sample_rate);
+    bw_cab_init(&_cab_coeffs);
+    bw_cab_set_sample_rate(&_cab_coeffs, sample_rate);
     return ProcessorReturnCode::OK;
 }
 
-void NotchPlugin::configure(float sample_rate)
+void CabSimPlugin::configure(float sample_rate)
 {
-    bw_notch_set_sample_rate(&_notch_coeffs, sample_rate);
+    bw_cab_set_sample_rate(&_cab_coeffs, sample_rate);
+    return;
 }
 
-void NotchPlugin::set_enabled(bool enabled)
+void CabSimPlugin::set_enabled(bool enabled)
 {
     Processor::set_enabled(enabled);
-    bw_notch_reset_coeffs(&_notch_coeffs);
+    bw_cab_reset_coeffs(&_cab_coeffs);
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_notch_reset_state(&_notch_coeffs, &_notch_states[i], 0.0f);
+        bw_cab_reset_state(&_cab_coeffs, &_cab_state[i], 0.0f);
     }
 }
 
-void NotchPlugin::set_bypassed(bool bypassed)
+void CabSimPlugin::set_bypassed(bool bypassed)
 {
     _host_control.post_event(std::make_unique<SetProcessorBypassEvent>(this->id(), bypassed, IMMEDIATE_PROCESS));
 }
 
-void NotchPlugin::process_event(const RtEvent& event)
+void CabSimPlugin::process_event(const RtEvent& event)
 {
     switch (event.type())
     {
@@ -93,11 +99,12 @@ void NotchPlugin::process_event(const RtEvent& event)
     }
 }
 
-void NotchPlugin::process_audio(const ChunkSampleBuffer &in_buffer, ChunkSampleBuffer &out_buffer)
+void CabSimPlugin::process_audio(const ChunkSampleBuffer &in_buffer, ChunkSampleBuffer &out_buffer)
 {
     /* Update parameter values */
-    bw_notch_set_cutoff(&_notch_coeffs, _frequency->processed_value());
-    bw_notch_set_Q(&_notch_coeffs, _Q->processed_value());
+    bw_cab_set_cutoff_low(&_cab_coeffs, _cutoff_low->processed_value());
+    bw_cab_set_cutoff_high(&_cab_coeffs, _cutoff_high->processed_value());
+    bw_cab_set_tone(&_cab_coeffs, _tone->processed_value());
 
     if (_bypass_manager.should_process())
     {
@@ -110,14 +117,14 @@ void NotchPlugin::process_audio(const ChunkSampleBuffer &in_buffer, ChunkSampleB
             out_channel_ptrs[i] = out_buffer.channel(i);
         }
 
-        bw_notch_update_coeffs_ctrl(&_notch_coeffs);
+        bw_cab_update_coeffs_ctrl(&_cab_coeffs);
         for (int n = 0; n < AUDIO_CHUNK_SIZE; n++)
         {
-            bw_notch_update_coeffs_audio(&_notch_coeffs);
+            bw_cab_update_coeffs_audio(&_cab_coeffs);
             for (int i = 0; i < _current_input_channels; i++)
             {
-                *out_channel_ptrs[i]++ = bw_notch_process1(&_notch_coeffs, &_notch_states[i],
-                                                            *in_channel_ptrs[i]++);
+                *out_channel_ptrs[i]++ = bw_cab_process1(&_cab_coeffs, &_cab_state[i],
+                                                         *in_channel_ptrs[i]++);
             }
         }
         if (_bypass_manager.should_ramp())
@@ -133,10 +140,10 @@ void NotchPlugin::process_audio(const ChunkSampleBuffer &in_buffer, ChunkSampleB
     }
 }
 
-std::string_view NotchPlugin::static_uid()
+std::string_view CabSimPlugin::static_uid()
 {
     return PLUGIN_UID;
 }
 
 
-} // namespace sushi::internal::notch_plugin
+} // namespace sushi::internal::cab_sim_plugin

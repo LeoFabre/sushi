@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 Elk Audio AB
+ * Copyright 2017-2025 Elk Audio AB
  *
  * SUSHI is free software: you can redistribute it and/or modify it under the terms of
  * the GNU Affero General Public License as published by the Free Software Foundation,
@@ -15,7 +15,7 @@
 
 /**
  * @brief Noise gate from Brickworks library
- * @copyright 2017-2023 Elk Audio AB, Stockholm
+ * @copyright 2017-2025 Elk Audio AB, Stockholm
  */
 
 #include <cassert>
@@ -76,7 +76,7 @@ void NoiseGatePlugin::set_enabled(bool enabled)
     bw_noise_gate_reset_coeffs(&_noise_gate_coeffs);
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_noise_gate_reset_state(&_noise_gate_coeffs, &_noise_gate_states[i]);
+        bw_noise_gate_reset_state(&_noise_gate_coeffs, &_noise_gate_states[i], 0.0f, 0.0f);
     }
 }
 

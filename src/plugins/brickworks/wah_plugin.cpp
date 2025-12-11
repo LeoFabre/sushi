@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 Elk Audio AB
+ * Copyright 2017-2025 Elk Audio AB
  *
  * SUSHI is free software: you can redistribute it and/or modify it under the terms of
  * the GNU Affero General Public License as published by the Free Software Foundation,
@@ -15,7 +15,7 @@
 
 /**
  * @brief Wah from Brickworks library
- * @copyright 2017-2023 Elk Audio AB, Stockholm
+ * @copyright 2017-2025 Elk Audio AB, Stockholm
  */
 
 #include <cassert>
@@ -62,7 +62,7 @@ void WahPlugin::set_enabled(bool enabled)
     bw_wah_reset_coeffs(&_wah_coeffs);
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_wah_reset_state(&_wah_coeffs, &_wah_states[i]);
+        bw_wah_reset_state(&_wah_coeffs, &_wah_states[i], 0.0f);
     }
 }
 

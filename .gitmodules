@@ -28,7 +28,7 @@
 	url = ../sushi-grpc-api
 [submodule "third-party/brickworks"]
 	path = third-party/brickworks
-	url = https://github.com/sdangelo/brickworks/
+	url = https://github.com/Orastron/brickworks/
 [submodule "third-party/freeverb"]
 	path = third-party/freeverb
 	url = ../freeverb.git

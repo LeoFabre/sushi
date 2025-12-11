@@ -14,36 +14,29 @@
  */
 
 /**
- * @brief Flanger from Brickworks library
+ * @brief Ring modulator from Brickworks library
  * @copyright 2017-2025 Elk Audio AB, Stockholm
  */
 
-#ifndef FLANGER_PLUGIN_H
-#define FLANGER_PLUGIN_H
+#ifndef RING_MOD_PLUGIN_H
+#define RING_MOD_PLUGIN_H
 
-#include <vector>
-
-#include "elk-warning-suppressor/warning_suppressor.hpp"
-
-ELK_PUSH_WARNING
-ELK_DISABLE_SHORTEN_64_TO_32
-ELK_DISABLE_CONVERSION_FROM_SIZE_T_TO_INT
-#include <bw_chorus.h>
-ELK_POP_WARNING
+#include <bw_ring_mod.h>
+#include <bw_phase_gen.h>
 
 #include "library/internal_plugin.h"
 
 ELK_PUSH_WARNING
 ELK_DISABLE_DOMINANCE_INHERITANCE
 
-namespace sushi::internal::flanger_plugin {
+namespace sushi::internal::ring_mod_plugin {
 
-class FlangerPlugin : public InternalPlugin, public UidHelper<FlangerPlugin>
+class RingModPlugin : public InternalPlugin, public UidHelper<RingModPlugin>
 {
 public:
-    explicit FlangerPlugin(HostControl hostControl);
+    explicit RingModPlugin(HostControl hostControl);
 
-    ~FlangerPlugin() override = default;
+    ~RingModPlugin() override = default;
 
     ProcessorReturnCode init(float sample_rate) override;
 
@@ -60,19 +53,19 @@ public:
     static std::string_view static_uid();
 
 private:
-    BypassManager _bypass_manager{false, std::chrono::milliseconds(100)};
+    BypassManager _bypass_manager;
     float _sample_rate{0};
 
-    FloatParameterValue* _rate;
+    FloatParameterValue* _frequency;
     FloatParameterValue* _amount;
 
-    bw_chorus_coeffs _chorus_coeffs;
-    std::array<bw_chorus_state, MAX_TRACK_CHANNELS> _chorus_states;
-    std::array<std::vector<std::byte>, MAX_TRACK_CHANNELS> _delay_mem_areas;
+    bw_phase_gen_coeffs _phase_gen_coeffs;
+    std::array<bw_phase_gen_state, MAX_TRACK_CHANNELS> _phase_gen_state;
+    bw_ring_mod_coeffs _ring_mod_coeffs;
 };
 
-} // namespace sushi::internal::flanger_plugin
+} // namespace sushi::internal::ring_mod_plugin
 
 ELK_POP_WARNING
 
-#endif // FLANGER_PLUGIN_H
+#endif // RING_MOD_PLUGIN_H

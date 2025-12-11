@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 Elk Audio AB
+ * Copyright 2017-2025 Elk Audio AB
  *
  * SUSHI is free software: you can redistribute it and/or modify it under the terms of
  * the GNU Affero General Public License as published by the Free Software Foundation,
@@ -15,7 +15,7 @@
 
 /**
  * @brief Flanger from Brickworks library
- * @copyright 2017-2023 Elk Audio AB, Stockholm
+ * @copyright 2017-2025 Elk Audio AB, Stockholm
  */
 
 #include <cassert>
@@ -80,11 +80,11 @@ void FlangerPlugin::set_enabled(bool enabled)
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
         _delay_mem_areas[i].resize(bw_chorus_mem_req(&_chorus_coeffs));
-        bw_chorus_mem_set(&_chorus_states[i], _delay_mem_areas[i].data());
+        bw_chorus_mem_set(&_chorus_coeffs, &_chorus_states[i], _delay_mem_areas[i].data());
     }
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_chorus_reset_state(&_chorus_coeffs, &_chorus_states[i]);
+        bw_chorus_reset_state(&_chorus_coeffs, &_chorus_states[i], 0.0f);
     }
 }
 

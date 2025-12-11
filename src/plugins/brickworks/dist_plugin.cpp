@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 Elk Audio AB
+ * Copyright 2017-2025 Elk Audio AB
  *
  * SUSHI is free software: you can redistribute it and/or modify it under the terms of
  * the GNU Affero General Public License as published by the Free Software Foundation,
@@ -15,7 +15,7 @@
 
 /**
  * @brief Distortion from Brickworks library, with internal 2x resampling
- * @copyright 2017-2023 Elk Audio AB, Stockholm
+ * @copyright 2017-2025 Elk Audio AB, Stockholm
  */
 
 #include <cassert>
@@ -73,7 +73,7 @@ void DistPlugin::set_enabled(bool enabled)
     bw_dist_reset_coeffs(&_dist_coeffs);
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_dist_reset_state(&_dist_coeffs, &_dist_states[i]);
+        bw_dist_reset_state(&_dist_coeffs, &_dist_states[i], 0.0f);
         bw_src_int_reset_state(&_src_up_coeffs, &_src_up_states[i], 0.0f);
         bw_src_int_reset_state(&_src_down_coeffs, &_src_down_states[i], 0.0f);
     }

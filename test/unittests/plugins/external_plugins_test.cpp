@@ -14,6 +14,8 @@
 
 #include "plugins/brickworks/bitcrusher_plugin.h"
 #include "plugins/brickworks/compressor_plugin.cpp"
+#include "plugins/brickworks/cab_sim_plugin.cpp"
+#include "plugins/brickworks/ring_mod_plugin.cpp"
 #include "plugins/brickworks/bitcrusher_plugin.cpp"
 #include "plugins/brickworks/wah_plugin.cpp"
 #include "plugins/brickworks/eq3band_plugin.cpp"
@@ -221,6 +223,7 @@ void test_fx_plugin_instantiation(const std::string& uid,
         test_fx_plugin_buffers_not_overflow(plugin_uid);\
     }
 
+EXTERNAL_PLUGIN_TEST_CASES(CabSim, "sushi.brickworks.cab_sim", "Cab Simulator", 1.0e-4f)
 EXTERNAL_PLUGIN_TEST_CASES(Chorus, "sushi.brickworks.chorus", "Chorus", 1.0e-4f)
 EXTERNAL_PLUGIN_TEST_CASES(Clip, "sushi.brickworks.clip", "Clip", 1.0e-2f)
 EXTERNAL_PLUGIN_TEST_CASES(CombDelay,"sushi.brickworks.comb_delay", "Comb Delay", 1.0e-4f)
@@ -234,6 +237,7 @@ EXTERNAL_PLUGIN_TEST_CASES(HighPass, "sushi.brickworks.highpass", "HighPass", 1.
 EXTERNAL_PLUGIN_TEST_CASES(MultiFilter, "sushi.brickworks.multi_filter", "MultiFilter", 1.0e-4f)
 EXTERNAL_PLUGIN_TEST_CASES(Notch, "sushi.brickworks.notch", "Notch", 1.0e-4f)
 EXTERNAL_PLUGIN_TEST_CASES(Phaser, "sushi.brickworks.phaser", "Phaser", 1.0e-4f)
+EXTERNAL_PLUGIN_TEST_CASES(RingMod, "sushi.brickworks.ring_mod", "Ring Modulator", 1.0e-4f)
 EXTERNAL_PLUGIN_TEST_CASES(Saturation, "sushi.brickworks.saturation", "Saturation", 1.0e-2f)
 EXTERNAL_PLUGIN_TEST_CASES(Tremolo, "sushi.brickworks.tremolo", "Tremolo", 1.0e-4f)
 EXTERNAL_PLUGIN_TEST_CASES(Vibrato, "sushi.brickworks.vibrato", "Vibrato", 1.0e-4f)

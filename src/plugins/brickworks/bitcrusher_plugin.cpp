@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2023 Elk Audio AB
+ * Copyright 2017-2025 Elk Audio AB
  *
  * SUSHI is free software: you can redistribute it and/or modify it under the terms of
  * the GNU Affero General Public License as published by the Free Software Foundation,
@@ -15,7 +15,7 @@
 
 /**
  * @brief Bitcrusher from Brickworks library
- * @copyright 2017-2023 Elk Audio AB, Stockholm
+ * @copyright 2017-2025 Elk Audio AB, Stockholm
  */
 
 #include <cassert>
@@ -62,7 +62,7 @@ void BitcrusherPlugin::set_enabled(bool enabled)
     bw_bd_reduce_reset_coeffs(&_bd_reduce_coeffs);
     for (int i = 0; i < MAX_TRACK_CHANNELS; i++)
     {
-        bw_sr_reduce_reset_state(&_sr_reduce_coeffs, &_sr_reduce_states[i]);
+        bw_sr_reduce_reset_state(&_sr_reduce_coeffs, &_sr_reduce_states[i], 0.0f);
     }
 }
 

@@ -14,36 +14,28 @@
  */
 
 /**
- * @brief Flanger from Brickworks library
+ * @brief Cabinet simulator from Brickworks library
  * @copyright 2017-2025 Elk Audio AB, Stockholm
  */
 
-#ifndef FLANGER_PLUGIN_H
-#define FLANGER_PLUGIN_H
+#ifndef CAB_SIM_PLUGIN_H
+#define CAB_SIM_PLUGIN_H
 
-#include <vector>
-
-#include "elk-warning-suppressor/warning_suppressor.hpp"
-
-ELK_PUSH_WARNING
-ELK_DISABLE_SHORTEN_64_TO_32
-ELK_DISABLE_CONVERSION_FROM_SIZE_T_TO_INT
-#include <bw_chorus.h>
-ELK_POP_WARNING
+#include <bw_cab.h>
 
 #include "library/internal_plugin.h"
 
 ELK_PUSH_WARNING
 ELK_DISABLE_DOMINANCE_INHERITANCE
 
-namespace sushi::internal::flanger_plugin {
+namespace sushi::internal::cab_sim_plugin {
 
-class FlangerPlugin : public InternalPlugin, public UidHelper<FlangerPlugin>
+class CabSimPlugin : public InternalPlugin, public UidHelper<CabSimPlugin>
 {
 public:
-    explicit FlangerPlugin(HostControl hostControl);
+    explicit CabSimPlugin(HostControl hostControl);
 
-    ~FlangerPlugin() override = default;
+    ~CabSimPlugin() override = default;
 
     ProcessorReturnCode init(float sample_rate) override;
 
@@ -60,19 +52,19 @@ public:
     static std::string_view static_uid();
 
 private:
-    BypassManager _bypass_manager{false, std::chrono::milliseconds(100)};
+    BypassManager _bypass_manager;
     float _sample_rate{0};
 
-    FloatParameterValue* _rate;
-    FloatParameterValue* _amount;
+    FloatParameterValue* _cutoff_low;
+    FloatParameterValue* _cutoff_high;
+    FloatParameterValue* _tone;
 
-    bw_chorus_coeffs _chorus_coeffs;
-    std::array<bw_chorus_state, MAX_TRACK_CHANNELS> _chorus_states;
-    std::array<std::vector<std::byte>, MAX_TRACK_CHANNELS> _delay_mem_areas;
+    bw_cab_coeffs _cab_coeffs;
+    std::array<bw_cab_state, MAX_TRACK_CHANNELS> _cab_state;
 };
 
-} // namespace sushi::internal::flanger_plugin
+} // namespace sushi::internal::cab_sim_plugin
 
 ELK_POP_WARNING
 
-#endif // FLANGER_PLUGIN_H
+#endif // CAB_SIM_PLUGIN_H
