@@ -309,6 +309,8 @@ TEST_F(TestLv2Wrapper, TestTimeInfo)
      */
 }
 
+
+#ifndef DISABLE_MULTICORE_UNIT_TESTS
 // TODO: This tests synchronous worker invocation.
 // Asynchronous invocation requires an additional LV2 extension to be implemented first,
 // optional for eg-sampler, but required for its sample-loading feature.
@@ -340,6 +342,7 @@ TEST_F(TestLv2Wrapper, TestSynchronousStateAndWorkerThreads)
                   << std::endl;
     }
 }
+#endif
 
 #ifdef SUSHI_BUILD_WITH_LV2_MDA_TESTS
 

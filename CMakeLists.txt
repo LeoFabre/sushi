@@ -82,7 +82,7 @@ if (APPLE)
     set(SUSHI_WITH_ALSA_MIDI_DEFAULT OFF)
     set(SUSHI_WITH_RT_MIDI_DEFAULT ON)
     set(SUSHI_WITH_VST2_DEFAULT OFF)
-    set(SUSHI_WITH_LV2_DEFAULT OFF)
+    set(SUSHI_WITH_LV2_DEFAULT ON)
     set(SUSHI_WITH_LV2_MDA_TESTS_DEFAULT OFF)
     set(SUSHI_WITH_UNIT_TESTS_DEFAULT ON)
     set(SUSHI_BUILD_TWINE_DEFAULT ON)
@@ -477,6 +477,10 @@ endif()
 if (${SUSHI_WITH_LV2})
     message("Building with LV2 support.")
 
+    find_package(lv2 CONFIG REQUIRED)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(LILV REQUIRED IMPORTED_TARGET lilv-0)
+
     set(ADDITIONAL_LV2_SOURCES src/library/lv2/lv2_wrapper.h
                                src/library/lv2/lv2_control.h
                                src/library/lv2/lv2_features.h
@@ -494,7 +498,7 @@ if (${SUSHI_WITH_LV2})
                                src/library/lv2/lv2_control.cpp)
 
     # Linked libraries
-    set(EXTRA_BUILD_LIBRARIES ${EXTRA_BUILD_LIBRARIES} lilv-0 lv2_host)
+    set(EXTRA_BUILD_LIBRARIES ${EXTRA_BUILD_LIBRARIES} PkgConfig::LILV lv2_host)
 
     # Compiler definitions
     set(EXTRA_COMPILE_DEFINITIONS ${EXTRA_COMPILE_DEFINITIONS} -DSUSHI_BUILD_WITH_LV2)
@@ -554,6 +558,7 @@ if (${SUSHI_WITH_SENTRY})
     set(EXTRA_BUILD_LIBRARIES ${EXTRA_BUILD_LIBRARIES} sentry::sentry)
     set(EXTRA_COMPILE_DEFINITIONS ${EXTRA_COMPILE_DEFINITIONS} -DSUSHI_BUILD_WITH_SENTRY -DSUSHI_SENTRY_DSN="${SUSHI_SENTRY_DSN}")
 endif()
+
 
 ####################
 #  Main Target     #
