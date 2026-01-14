@@ -12,13 +12,13 @@ endif()
 
 # Don't change version anywhere else. Everything is generated from this.
 set(SUSHI_VERSION_MAJOR 1)
-set(SUSHI_VERSION_MINOR 3)
+set(SUSHI_VERSION_MINOR 2)
 set(SUSHI_VERSION_REVISION 0)
 
 # Versioning for the external api(s)
 # Update this to match the version above only if the external api (in include/sushi and/or rpc_interface/protos)
 # has been changed. Otherwise don't update.
-set(SUSHI_EXTERNAL_API_VERSION "1.3.0")
+set(SUSHI_EXTERNAL_API_VERSION "1.2.0")
 
 project(sushi_library
     DESCRIPTION "Headless plugin host for Elk Audio OS"
