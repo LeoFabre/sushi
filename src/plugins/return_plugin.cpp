@@ -191,6 +191,9 @@ void inline ReturnPlugin::_swap_buffers()
 
 void inline ReturnPlugin::_maybe_swap_buffers(Time current_time)
 {
+#ifdef _MSC_VER
+    _swap_buffers();
+#else
     Time last_time = _last_process_time.load(std::memory_order_acquire);
     if (last_time != current_time)
     {
@@ -198,6 +201,7 @@ void inline ReturnPlugin::_maybe_swap_buffers(Time current_time)
         _processed_this_block = false;
         _swap_buffers();
     }
+#endif
 }
 
 } // end namespace sushi::internal::return_plugin
