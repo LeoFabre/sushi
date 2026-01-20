@@ -33,7 +33,12 @@ namespace sushi::internal::engine {
 
 constexpr auto CLIPPING_DETECTION_INTERVAL = std::chrono::milliseconds(500);
 
+#ifdef _MSC_VER
+constexpr auto RT_EVENT_TIMEOUT = std::chrono::milliseconds(500);
+#else
 constexpr auto RT_EVENT_TIMEOUT = std::chrono::milliseconds(200);
+#endif
+
 constexpr char TIMING_FILE_NAME[] = "timings.txt";
 constexpr int  TIMING_LOG_PRINT_INTERVAL = 15;
 
