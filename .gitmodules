@@ -38,3 +38,6 @@
 [submodule "third-party/portaudio"]
 	path = third-party/portaudio
 	url = https://github.com/PortAudio/portaudio.git
+[submodule "third-party/elk-plugin-extensions"]
+	path = third-party/elk-plugin-extensions
+	url = ../elk-plugin-extensions.git

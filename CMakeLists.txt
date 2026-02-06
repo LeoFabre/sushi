@@ -432,7 +432,7 @@ if (${SUSHI_WITH_VST3})
     endif()
 
     add_library(vst3_host STATIC ${VST3_HOST_SOURCES})
-    target_link_libraries(vst3_host PRIVATE ${AUDIOHOST_PLATFORM_LIBS})
+    target_link_libraries(vst3_host PRIVATE ${AUDIOHOST_PLATFORM_LIBS} elk_vst3_extensions)
     set_target_properties(vst3_host PROPERTIES EXCLUDE_FROM_ALL true)
     target_compile_features(vst3_host PUBLIC cxx_std_20)
     if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
@@ -455,7 +455,7 @@ if (${SUSHI_WITH_VST3})
                                 src/library/vst3x/vst3x_file_utils.cpp)
 
     # Linked libraries
-    set(EXTRA_BUILD_LIBRARIES ${EXTRA_BUILD_LIBRARIES} vst3_host sdk)
+    set(EXTRA_BUILD_LIBRARIES ${EXTRA_BUILD_LIBRARIES} vst3_host sdk elk_vst3_extensions)
 
     # Compiler definitions
     set(EXTRA_COMPILE_DEFINITIONS ${EXTRA_COMPILE_DEFINITIONS} -DSUSHI_BUILD_WITH_VST3)

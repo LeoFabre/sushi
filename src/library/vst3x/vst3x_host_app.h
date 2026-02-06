@@ -40,7 +40,7 @@ ELK_DISABLE_SHORTEN_64_TO_32
 #include "public.sdk/source/vst/hosting/module.h"
 #include "base/source/fobject.h"
 #include "public.sdk/source/vst/hosting/hostclasses.h"
-#include "vst3x_extensions.h"
+#include "elk_vst3_extensions/elk_vst3_extensions.h"
 
 ELK_POP_WARNING
 
