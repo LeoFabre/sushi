@@ -124,7 +124,7 @@ protected:
     std::atomic_bool _resume_notified {true};
     Time _pause_start;
 
-    Time _last_process_time;
+    Time _last_process_time{Time(0)};
     float _sample_rate;
     float _inv_sample_rate;
 };

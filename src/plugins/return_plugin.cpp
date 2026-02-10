@@ -196,9 +196,6 @@ void inline ReturnPlugin::_swap_buffers()
 void inline ReturnPlugin::_maybe_swap_buffers(int64_t current_samples)
 {
     int64_t prev_samples = _last_process_samples.load(std::memory_order_acquire);
-    ELKLOG_LOG_INFO("maybe_swap_buffers() called. Current: {}, prev: {}, _processed_this_block: {}, delta: {}",
-        current_samples, prev_samples, _processed_this_block, current_samples - prev_samples);
-
     if (prev_samples != current_samples)
     {
         _last_process_samples.store(current_samples, std::memory_order_release);
