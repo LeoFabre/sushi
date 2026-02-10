@@ -7,7 +7,7 @@
 
 #include "pluginterfaces/base/funknownimpl.h"
 #include "public.sdk/source/vst/vstsinglecomponenteffect.h"
-#include "library/vst3x/vst3x_extensions.h"
+#include "elk_vst3_extensions/elk_vst3_extensions.h"
 
 namespace test_utils {
 

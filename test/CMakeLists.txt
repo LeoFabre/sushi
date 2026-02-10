@@ -203,7 +203,7 @@ if (${SUSHI_WITH_VST3})
     else()
         set(TEST_COMPILE_DEFINITIONS ${TEST_COMPILE_DEFINITIONS} -DSUSHI_VST3_TEST_PLUGIN_PATH="../VST3/$<IF:$<CONFIG:DEBUG>,Debug,Release>/adelay.vst3")
     endif()
-    set(TEST_LINK_LIBRARIES ${TEST_LINK_LIBRARIES} vst3_host sdk base)
+    set(TEST_LINK_LIBRARIES ${TEST_LINK_LIBRARIES} vst3_host sdk base elk_vst3_extensions)
     set(TEST_DEPENDENCIES ${TEST_DEPENDENCIES} adelay vst3_host)
 endif()
 

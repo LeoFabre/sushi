@@ -55,6 +55,7 @@ if (${SUSHI_WITH_VST3})
     endif()
 
     add_subdirectory(vst3sdk)
+    add_subdirectory(elk-plugin-extensions)
 
     # vst3sdk overrides SMTG_ENABLE_VST3_PLUGIN_EXAMPLES if the sdk is included as a submodule.
     # So, we need to manually add adelay, as it is used by sushi unit tests.
