@@ -229,8 +229,8 @@ private:
     ChunkSampleBuffer _in_buffer;
     ChunkSampleBuffer _out_buffer;
 
-    Time _start_time;
-    PaTime _time_offset;
+    Time _start_time{Time(0)};
+    PaTime _time_offset{0};
     int64_t _processed_sample_count {0};
 
     engine::ControlBuffer _in_controls;

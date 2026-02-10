@@ -411,14 +411,10 @@ int PortAudioFrontend::_internal_process_callback(const void* input,
                                                   const PaStreamCallbackTimeInfo* time_info,
                                                   [[maybe_unused]]PaStreamCallbackFlags status_flags)
 {
-    // TODO: Print warning in case of under/overflow using the status_flags when we have rt-safe logging
-    ELKLOG_LOG_WARNING_IF(status_flags == paOutputUnderflow, "Detected output underflow in portaudio");
-    ELKLOG_LOG_WARNING_IF(status_flags == paOutputOverflow, "Detected output overflow in portaudio");
-    ELKLOG_LOG_WARNING_IF(status_flags == paInputUnderflow, "Detected input underflow in portaudio");
-    ELKLOG_LOG_WARNING_IF(status_flags == paInputOverflow, "Detected input overflow in portaudio");
-
     assert(frame_count == AUDIO_CHUNK_SIZE);
-    auto pa_time_elapsed = std::chrono::duration<double>(time_info->currentTime - _time_offset);
+    ELKLOG_LOG_WARNING_IF(status_flags & (paOutputUnderflow | paOutputOverflow | paInputUnderflow | paInputOverflow), "Portaudio reported under/overflow: {}", status_flags);
+
+    auto pa_time_elapsed = std::chrono::duration<double>(time_info->outputBufferDacTime - _time_offset);
     Time timestamp = _start_time + std::chrono::duration_cast<std::chrono::microseconds>(pa_time_elapsed);
 
     _out_buffer.clear();
