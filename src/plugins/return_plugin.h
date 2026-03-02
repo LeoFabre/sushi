@@ -82,7 +82,7 @@ private:
 
     void inline _swap_buffers();
 
-    void inline _maybe_swap_buffers(Time current_time);
+    void inline _maybe_swap_buffers(int64_t current_samples);
 
     float                                 _sample_rate;
     SendReturnFactory*                    _manager;
@@ -99,6 +99,7 @@ private:
     BypassManager                         _bypass_manager;
 
     std::atomic<Time>                     _last_process_time{Time(0)};
+    std::atomic<int64_t>                  _last_process_samples{0};
 
     static_assert(decltype(_last_process_time)::is_always_lock_free);
 };

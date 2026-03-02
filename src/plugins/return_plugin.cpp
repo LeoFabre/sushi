@@ -20,8 +20,12 @@
 
 #include <algorithm>
 
+#include "elklog/static_logger.h"
+
 #include "return_plugin.h"
 #include "send_plugin.h"
+
+ELKLOG_GET_LOGGER_WITH_MODULE_NAME("return_plugin");
 
 namespace sushi::internal::return_plugin {
 
@@ -49,7 +53,7 @@ ReturnPlugin::~ReturnPlugin()
 void ReturnPlugin::send_audio(const ChunkSampleBuffer& buffer, int start_channel, float gain, int thread_id)
 {
     std::scoped_lock<SpinLock> lock(_buffer_lock);
-    _maybe_swap_buffers(_host_control.transport()->current_process_time());
+    _maybe_swap_buffers(_host_control.transport()->current_samples());
 
     /* If the sender invoking this function is on the same thread, and process_audio() has not yet been called, we can
      * copy directly to _active_out (i.e. zero delay), if not, we must copy to _active_in (with 1 buffer delay) */
@@ -67,7 +71,7 @@ void ReturnPlugin::send_audio_with_ramp(const ChunkSampleBuffer& buffer, int sta
                                         float start_gain, float end_gain, int thread_id)
 {
     std::scoped_lock<SpinLock> lock(_buffer_lock);
-    _maybe_swap_buffers(_host_control.transport()->current_process_time());
+    _maybe_swap_buffers(_host_control.transport()->current_samples());
 
     /* See comment in send_audio() */
     auto target_buffer = (thread_id == _current_processing_thread && !_processed_this_block)? _active_out : _active_in;
@@ -148,7 +152,7 @@ void ReturnPlugin::process_audio(const ChunkSampleBuffer& /*in_buffer*/, ChunkSa
 {
     {
         std::scoped_lock<SpinLock> lock(_buffer_lock);
-        _maybe_swap_buffers(_host_control.transport()->current_process_time());
+        _maybe_swap_buffers(_host_control.transport()->current_samples());
     }
 
     if (_bypass_manager.should_process())
@@ -189,12 +193,12 @@ void inline ReturnPlugin::_swap_buffers()
     _active_in->clear();
 }
 
-void inline ReturnPlugin::_maybe_swap_buffers(Time current_time)
+void inline ReturnPlugin::_maybe_swap_buffers(int64_t current_samples)
 {
-    Time last_time = _last_process_time.load(std::memory_order_acquire);
-    if (last_time != current_time)
+    int64_t prev_samples = _last_process_samples.load(std::memory_order_acquire);
+    if (prev_samples != current_samples)
     {
-        _last_process_time.store(current_time, std::memory_order_release);
+        _last_process_samples.store(current_samples, std::memory_order_release);
         _processed_this_block = false;
         _swap_buffers();
     }
