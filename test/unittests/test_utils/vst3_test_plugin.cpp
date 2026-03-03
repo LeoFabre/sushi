@@ -38,8 +38,9 @@ Steinberg::tresult Vst3TestPlugin::initialize(Steinberg::FUnknown* context)
     auto result = SingleComponentEffect::initialize(context);
     if (result == kResultTrue)
     {
-        parameters.addParameter (STR16 ("Bypass"), nullptr, 1, 0, ParameterInfo::kCanAutomate|ParameterInfo::kIsBypass, 1);
+        parameters.addParameter (STR16 ("Bypass"), nullptr, 1, 0, ParameterInfo::kCanAutomate | ParameterInfo::kIsBypass, 1);
         parameters.addParameter (STR16 ("Delay"), STR16 ("sec"), 0, 1, ParameterInfo::kCanAutomate, 2);
+        parameters.addParameter (STR16 ("Output"), STR16 (""), 0, 1, ParameterInfo::kIsReadOnly, 3);
 
         addAudioInput (STR16 ("AudioInput"), SpeakerArr::kStereo);
         addAudioOutput (STR16 ("AudioOutput"), SpeakerArr::kStereo);

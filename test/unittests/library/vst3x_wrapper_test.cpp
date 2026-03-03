@@ -224,7 +224,7 @@ protected:
 TEST_F(TestVst3xWrapper, TestLoadAndInitPlugin)
 {
     SetUp(SUSHI_VST3_TEST_PLUGIN_PATH, PLUGIN_NAME);
-    ASSERT_TRUE(_module_under_test.get());
+    ASSERT_TRUE(_module_under_test);
     EXPECT_EQ("ADelay", _module_under_test->name());
 
     auto parameters = _module_under_test->all_parameters();
@@ -388,6 +388,31 @@ TEST_F(TestVst3xWrapper, TestParameterHandling)
     std::tie(status, string_repr) = _module_under_test->parameter_value_formatted(DELAY_PARAM_ID);
     EXPECT_EQ(ProcessorReturnCode::OK, status);
     EXPECT_EQ("0.5000", string_repr);
+}
+
+TEST_F(TestVst3xWrapper, TestOutputParameterHandling)
+{
+    ChunkSampleBuffer in_buffer(2);
+    ChunkSampleBuffer out_buffer(2);
+
+    Steinberg::IPtr<test_utils::Vst3TestPlugin> plugin = new test_utils::Vst3TestPlugin();
+    SetUp(plugin.get());
+
+    _module_under_test->set_enabled(true);
+
+    auto parameters = _module_under_test->all_parameters();
+    // 2 normal float parameters and 2 string properties
+    ASSERT_EQ(4u, parameters.size());
+    EXPECT_EQ("Delay", parameters[0]->name());
+    EXPECT_EQ("sec", parameters[0]->unit());
+    EXPECT_EQ(2, parameters[0]->id());
+    EXPECT_TRUE(parameters[0]->automatable());
+
+
+    EXPECT_EQ("Output", parameters[1]->name());
+    EXPECT_EQ("", parameters[1]->unit());
+    EXPECT_EQ(3, parameters[1]->id());
+    EXPECT_FALSE(parameters[1]->automatable());
 }
 
 TEST_F(TestVst3xWrapper, TestGateOutput)
@@ -620,17 +645,17 @@ TEST_F(TestVst3xWrapper, TestStringProperties)
     ASSERT_TRUE(plugin->component_handler_extension);
 
     auto parameters = _module_under_test->all_parameters();
-    ASSERT_EQ(3, parameters.size());
+    ASSERT_EQ(4, parameters.size());
 
-    ASSERT_EQ(test_utils::Vst3TestPlugin::PROPERTY_ID_1, parameters[1]->id());
-    ASSERT_EQ(ParameterType::STRING, parameters[1]->type());
-    ASSERT_EQ("property_1", parameters[1]->name());
-    ASSERT_EQ("Property 1", parameters[1]->label());
-
-    ASSERT_EQ(test_utils::Vst3TestPlugin::PROPERTY_ID_2, parameters[2]->id());
+    ASSERT_EQ(test_utils::Vst3TestPlugin::PROPERTY_ID_1, parameters[2]->id());
     ASSERT_EQ(ParameterType::STRING, parameters[2]->type());
-    ASSERT_EQ("property_2", parameters[2]->name());
-    ASSERT_EQ("Property 2", parameters[2]->label());
+    ASSERT_EQ("property_1", parameters[2]->name());
+    ASSERT_EQ("Property 1", parameters[2]->label());
+
+    ASSERT_EQ(test_utils::Vst3TestPlugin::PROPERTY_ID_2, parameters[3]->id());
+    ASSERT_EQ(ParameterType::STRING, parameters[3]->type());
+    ASSERT_EQ("property_2", parameters[3]->name());
+    ASSERT_EQ("Property 2", parameters[3]->label());
 
     // Set values
     auto res = _module_under_test->set_property_value(test_utils::Vst3TestPlugin::PROPERTY_ID_1, "new value");

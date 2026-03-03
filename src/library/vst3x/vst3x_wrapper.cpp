@@ -656,7 +656,7 @@ bool Vst3xWrapper::_register_parameters()
             auto param_name = to_ascii_str(info.title);
             auto param_unit = to_ascii_str(info.units);
             bool automatable = info.flags & Steinberg::Vst::ParameterInfo::kCanAutomate;
-            bool read_only = info.flags & Steinberg::Vst::ParameterInfo::kCanAutomate;
+            bool read_only = info.flags & Steinberg::Vst::ParameterInfo::kIsReadOnly;
 
             auto direction = (automatable && !read_only) ? Direction::AUTOMATABLE : Direction::OUTPUT;
 
