@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15..3.23)
+cmake_minimum_required(VERSION 3.28)
 
 # Require out-of-source builds
 file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
@@ -12,7 +12,7 @@ endif()
 
 # Don't change version anywhere else. Everything is generated from this.
 set(SUSHI_VERSION_MAJOR 1)
-set(SUSHI_VERSION_MINOR 2)
+set(SUSHI_VERSION_MINOR 3)
 set(SUSHI_VERSION_REVISION 0)
 
 # Versioning for the external api(s)
@@ -187,7 +187,7 @@ if (${SUSHI_BUILD_TWINE})
     endif()
     set(EXTRA_BUILD_LIBRARIES ${EXTRA_BUILD_LIBRARIES} ${TWINE_LIB})
 else()
-    find_package(twine 1.0)
+    find_package(twine 1.1)
     set(INCLUDE_DIRS ${INCLUDE_DIRS} ${TWINE_PATH})
     set(EXTRA_BUILD_LIBRARIES ${EXTRA_BUILD_LIBRARIES} ${TWINE_LIB})
     find_package(elk-warning-suppressor 0.1.0 COMPONENTS warningSuppressor)

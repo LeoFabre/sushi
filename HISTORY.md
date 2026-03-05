@@ -1,4 +1,4 @@
-## Next
+## 1.3.0
 New Features:
   * Tracks can be explicitly allocated to threads
   * Send and return plugins are now zero delay under some conditions
@@ -15,6 +15,7 @@ Fixes:
   * Updates for deprecated features in C++20
   * Refactored processor channel config to be less stateful
   * Fixed issue with VST2 plugins with > 16 channels
+  * Vst3 non-automatable parameter bug fixed
 
 
 ## 1.2.0
