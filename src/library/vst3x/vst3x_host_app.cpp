@@ -287,12 +287,12 @@ bool PluginInstance::load_plugin(const std::string& plugin_path, const std::stri
     _controller = controller;
     _name = plugin_name;
 
-    _query_extension_interfaces();
-
     if (!_connect_components())
     {
         ELKLOG_LOG_ERROR("Failed to connect component to editor");
     }
+    _query_extension_interfaces();
+
     return true;
 }
 
