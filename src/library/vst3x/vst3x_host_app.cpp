@@ -59,7 +59,7 @@ Steinberg::tresult SushiHostApplication::getName(Steinberg::Vst::String128 name)
 
 {
     Steinberg::UString128 str(HOST_NAME);
-    str.copyTo (name, 0);
+    str.copyTo (name, 128);
     return Steinberg::kResultOk;
 }
 
