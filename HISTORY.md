@@ -16,7 +16,7 @@ Fixes:
   * Refactored processor channel config to be less stateful
   * Fixed issue with VST2 plugins with > 16 channels
   * Vst3 non-automatable parameter bug fixed
-
+  * Vst3 32 bit crash on load fixed
 
 ## 1.2.0
 
