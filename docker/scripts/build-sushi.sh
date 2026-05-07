@@ -6,19 +6,16 @@
 #
 # Modes:
 #   (default)   Standalone Sushi for Elk Audio OS.
-#               Uses raspa + EVL for hard-RT audio. Requires Elk Audio OS on device.
+#               raspa + EVL provide hard-RT audio. Twine built with EVL workers.
 #
-#   --reactive  Sushi as a library for embedding inside a Bela render() callback.
-#               Bela's PRU + Xenomai RT thread drives the audio — no raspa/EVL needed.
-#               Better latency than standalone mode on Bela hardware.
-#
-# Examples:
-#   build-sushi.sh /workspace/sushi /workspace/build-elk
-#   build-sushi.sh --reactive /workspace/sushi /workspace/build-bela
-#   build-sushi.sh --reactive /workspace/sushi /workspace/build-bela -DSUSHI_AUDIO_BUFFER_SIZE=32
+#   --reactive  Sushi as a library for embedding in a Bela render() callback.
+#               Bela's PRU + Xenomai thread drives audio — no raspa/EVL needed.
+#               Twine built in POSIX mode (render() is already in the Xenomai RT
+#               thread; twine worker threads are pthreads, safe for multi-core DSP).
 #
 # Prerequisites:
-#   git submodule update --init --recursive   (in SUSHI_SRC)
+#   git submodule update --init --recursive   (in SUSHI_SRC, except twine)
+#   twine: initialised automatically from /opt/twine-src if submodule missing.
 
 set -euo pipefail
 
@@ -32,7 +29,7 @@ fi
 
 SUSHI_SRC="${1:-/workspace/sushi}"
 BUILD_DIR="${2:-/workspace/build-sushi}"
-shift 2 2>/dev/null || true   # remaining args forwarded to cmake
+shift 2 2>/dev/null || true
 
 # ── Sanity check ──────────────────────────────────────────────────────────────
 
@@ -41,15 +38,14 @@ if [[ ! -f "${SUSHI_SRC}/CMakeLists.txt" ]]; then
     exit 1
 fi
 
-# ── Twine detection ───────────────────────────────────────────────────────────
-# twine is Elk Audio's RT-aware threading library (private repo).
-# It enables multi-core audio processing across the 4 Cortex-A53 cores.
-# Initialise the submodule if you have access to elk-audio/twine:
-#   git submodule update --init twine
+# ── Twine setup ───────────────────────────────────────────────────────────────
+# twine is a public Elk Audio repo (https://github.com/elk-audio/twine).
+# If the submodule is not initialised in the Sushi workspace, symlink the
+# copy cloned into the image at /opt/twine-src.
 
-TWINE_AVAILABLE=false
-if [[ -f "${SUSHI_SRC}/twine/CMakeLists.txt" ]]; then
-    TWINE_AVAILABLE=true
+if [[ ! -f "${SUSHI_SRC}/twine/CMakeLists.txt" ]]; then
+    echo "twine submodule not initialised — symlinking /opt/twine-src"
+    ln -sfn /opt/twine-src "${SUSHI_SRC}/twine"
 fi
 
 # ── Common cmake flags ────────────────────────────────────────────────────────
@@ -60,6 +56,9 @@ COMMON_FLAGS=(
     -DVCPKG_TARGET_TRIPLET="${VCPKG_TARGET_TRIPLET:-arm64-elk-linux}"
     -DVCPKG_HOST_TRIPLET="${VCPKG_HOST_TRIPLET:-x64-linux}"
     -DCMAKE_BUILD_TYPE=Release
+    -DSUSHI_BUILD_TWINE=ON
+    -DSUSHI_TWINE_STATIC=ON
+    -DTWINE_WITH_TESTS=OFF
     -DSUSHI_WITH_JACK=OFF
     -DSUSHI_WITH_PORTAUDIO=OFF
     -DSUSHI_WITH_ALSA_MIDI=ON
@@ -73,54 +72,33 @@ COMMON_FLAGS=(
     -DSUSHI_BUILD_WITH_SANITIZERS=OFF
 )
 
-# ── Mode-specific flags ───────────────────────────────────────────────────────
+# ── Mode-specific flags + build ───────────────────────────────────────────────
 
 mkdir -p "${BUILD_DIR}"
 
 if $REACTIVE; then
-    # ── Reactive / Bela library mode ──────────────────────────────────────────
-    # Sushi processes audio when your Bela render() calls sushi->process().
-    # No raspa or EVL: Bela's PRU + Xenomai thread is the RT driver.
-    #
-    # Twine note: if enabled, twine creates worker threads for multi-core DSP.
-    # On Bela + Xenomai, those threads should ideally be Xenomai threads too.
-    # Build twine with TWINE_WITH_XENOMAI=ON to ensure that, otherwise they
-    # are plain pthreads (safe but may trigger Xenomai mode-switches).
-
-    echo "Mode: reactive library — Bela render() drives audio, no raspa/EVL"
-
-    if $TWINE_AVAILABLE; then
-        echo "  Twine: found — multi-core DSP across 4 Cortex-A53 cores"
-        TWINE_FLAGS=(-DSUSHI_BUILD_TWINE=ON -DTWINE_WITH_XENOMAI=ON -DTWINE_WITH_TESTS=OFF)
-    else
-        echo "  Twine: not found — single-core mode (init twine submodule for multi-core)"
-        TWINE_FLAGS=(-DSUSHI_BUILD_TWINE=OFF)
-    fi
+    # Twine RT backend: POSIX (no EVL/Xenomai flags set).
+    # Sushi only sets TWINE_WITH_EVL when SUSHI_WITH_RASPA=ON, so leaving
+    # both OFF here gives clean POSIX pthreads — the correct default for a
+    # library that will be called from an existing Bela Xenomai RT thread.
+    echo "Mode: reactive library for Bela (POSIX twine, no raspa/EVL)"
 
     cmake "${SUSHI_SRC}" -B "${BUILD_DIR}" \
         "${COMMON_FLAGS[@]}" \
-        "${TWINE_FLAGS[@]}" \
         -DSUSHI_WITH_RASPA=OFF \
-        -DSUSHI_BUILD_STANDALONE_APP=ON \
         "$@"
-
 else
-    # ── Standalone / Elk Audio OS mode ────────────────────────────────────────
-    # Sushi runs as a standalone process on Elk Audio OS.
-    # raspa + EVL provide the hard-RT audio callback.
-    # twine is expected from the system sysroot (SUSHI_BUILD_TWINE=OFF).
-
-    echo "Mode: standalone Elk Audio OS — raspa/EVL RT frontend"
+    # Twine RT backend: EVL.
+    # Sushi's CMakeLists sets TWINE_WITH_EVL=ON automatically when
+    # SUSHI_WITH_RASPA=ON and SUSHI_RASPA_FLAVOR=evl.
+    echo "Mode: standalone Elk Audio OS (EVL twine + raspa)"
 
     cmake "${SUSHI_SRC}" -B "${BUILD_DIR}" \
         "${COMMON_FLAGS[@]}" \
         -DSUSHI_WITH_RASPA=ON \
         -DSUSHI_RASPA_FLAVOR=evl \
-        -DSUSHI_BUILD_TWINE=OFF \
         "$@"
 fi
-
-# ── Build ─────────────────────────────────────────────────────────────────────
 
 cmake --build "${BUILD_DIR}" -j"$(nproc)"
 
@@ -142,12 +120,9 @@ if $REACTIVE; then
     echo "  target_link_libraries(my_project sushi_library)"
     echo ""
     echo "In render.cpp:"
-    echo "  #include <sushi/standalone_factory.h>  // or reactive_factory.h"
-    echo "  // see ${SUSHI_SRC}/include/sushi/reactive_factory.h"
+    echo "  #include <sushi/reactive_factory.h>"
 else
     echo "Sushi standalone built."
     echo "  Binary: ${BUILD_DIR}/apps/sushi"
-    echo ""
-    echo "Copy to device:"
-    echo "  scp ${BUILD_DIR}/apps/sushi root@pocketbeagle2:/usr/bin/"
+    echo "  Copy:   scp ${BUILD_DIR}/apps/sushi root@pocketbeagle2:/usr/bin/"
 fi

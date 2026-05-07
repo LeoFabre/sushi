@@ -146,7 +146,26 @@ RUN git clone --depth 1 --branch "${RASPA_REF}" "${RASPA_GIT}" /tmp/raspa-src \
     && cmake --install /tmp/raspa-build --prefix /opt/elk-sysroot/usr \
     && rm -rf /tmp/raspa-src /tmp/raspa-build
 
-# ── 7. JUCE ───────────────────────────────────────────────────────────────────
+# ── 7. twine — Elk Audio real-time threading library ──────────────────────────
+# twine abstracts EVL / Xenomai / POSIX thread creation and worker pools.
+# Sushi's CMakeLists calls add_subdirectory(twine) when SUSHI_BUILD_TWINE=ON
+# and selects the RT backend automatically:
+#   RASPA=ON  + FLAVOR=evl      → TWINE_WITH_EVL=ON      (Elk Audio OS)
+#   RASPA=OFF (reactive / Bela) → POSIX pthreads          (safe default)
+#
+# The source is cloned here so build-sushi.sh can symlink it into the Sushi
+# workspace as the twine submodule when the user hasn't initialised it.
+#
+# elk-warning-suppressor (relative submodule ../elk-warning-suppressor.git)
+# resolves to https://github.com/elk-audio/elk-warning-suppressor — also public.
+
+ARG TWINE_GIT="https://github.com/elk-audio/twine.git"
+ARG TWINE_REF="main"
+
+RUN git clone --depth 1 --branch "${TWINE_REF}" "${TWINE_GIT}" /opt/twine-src \
+    && git -C /opt/twine-src submodule update --init --recursive
+
+# ── 8. JUCE ───────────────────────────────────────────────────────────────────
 # Installed as a CMake package so plugin CMakeLists.txt can use:
 #   find_package(JUCE CONFIG REQUIRED)
 # JUCE modules are INTERFACE/source targets — they compile with the cross-
@@ -170,7 +189,7 @@ RUN wget -q -O /tmp/juce.zip \
 
 ENV JUCE_PATH="/opt/JUCE"
 
-# ── 8. vcpkg ──────────────────────────────────────────────────────────────────
+# ── 9. vcpkg ──────────────────────────────────────────────────────────────────
 # vcpkg cross-compiles CMake-findable packages (gRPC, libsndfile, lv2, lilv)
 # for ARM64 using the arm64-elk-linux triplet, which chainloads
 # toolchain-aarch64-elk.cmake so every port uses the ARM64 cross-compiler.
@@ -183,7 +202,7 @@ RUN git clone --depth 1 https://github.com/microsoft/vcpkg.git "${VCPKG_ROOT}" \
 
 COPY triplets/arm64-elk-linux.cmake "${VCPKG_ROOT}/triplets/community/arm64-elk-linux.cmake"
 
-# ── 9. Environment ────────────────────────────────────────────────────────────
+# ── 10. Environment ───────────────────────────────────────────────────────────
 
 ENV CROSS_COMPILE="aarch64-linux-gnu-"
 ENV CC="aarch64-linux-gnu-gcc"
