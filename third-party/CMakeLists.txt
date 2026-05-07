@@ -1,6 +1,8 @@
 add_subdirectory(fifo EXCLUDE_FROM_ALL)
 
-add_subdirectory(lv2_host)
+if (SUSHI_WITH_LV2)
+    add_subdirectory(lv2_host)
+endif()
 
 ###########################
 # oscpack compile options #
