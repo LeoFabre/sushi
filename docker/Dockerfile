@@ -5,23 +5,10 @@
 #   ▸ aarch64-linux-gnu GCC cross-compiler (from Ubuntu packages)
 #   ▸ ARM64 system libraries via multiarch (ALSA, FreeType, libcurl, …)
 #   ▸ libevl (EVL real-time userspace) cross-compiled for ARM64
+#   ▸ raspa (Elk Audio real-time audio lib) cross-compiled from source for ARM64
 #   ▸ JUCE 8.x installed as a CMake package for headless VST3 cross-builds
 #   ▸ vcpkg with an arm64-elk-linux triplet for CMake-findable packages
 #     (gRPC, libsndfile, lv2, lilv, …)
-#
-# ── raspa ──────────────────────────────────────────────────────────────────────
-# raspa is a proprietary Elk Audio library not publicly available.
-# You need to supply libraspa.so + headers before building Sushi with RASPA ON.
-# Two options:
-#   1. Copy from your device:
-#        scp root@pocketbeagle2:/usr/lib/libraspa.so* raspa/
-#        scp -r root@pocketbeagle2:/usr/include/raspa  raspa/include/
-#      Then at container run time:
-#        docker run -v $(pwd)/raspa/libraspa.so:/opt/elk-sysroot/usr/lib/libraspa.so \
-#                   -v $(pwd)/raspa/include:/opt/elk-sysroot/usr/include/raspa \
-#                   … elk-crossbuild
-#   2. Place libraspa.so and headers in docker/raspa/ and uncomment the
-#      COPY lines at the bottom of this file.
 #
 # ── Build ─────────────────────────────────────────────────────────────────────
 #   docker build -t elk-crossbuild docker/
@@ -80,31 +67,36 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ── 3. ARM64 system libraries via multiarch ───────────────────────────────────
 # Ubuntu multiarch installs arm64 libraries to /usr/lib/aarch64-linux-gnu/
 # and arch-specific headers to /usr/include/aarch64-linux-gnu/.
-# The CMake toolchain (toolchain-aarch64-elk.cmake) adds these paths to
-# CMAKE_FIND_ROOT_PATH so the cross-build can locate them automatically.
+# The CMake toolchain adds these paths to CMAKE_FIND_ROOT_PATH.
 
 RUN dpkg --add-architecture arm64 \
     && apt-get update && apt-get install -y --no-install-recommends \
-        # ALSA — for SUSHI_WITH_ALSA_MIDI
+        # ALSA — for SUSHI_WITH_ALSA_MIDI and raspa
         libasound2-dev:arm64 \
         # FreeType — required by JUCE even for headless builds (font metrics)
         libfreetype-dev:arm64 \
         # libcurl — required by JUCE modules (WebInputStream etc.)
         libcurl4-openssl-dev:arm64 \
         libssl-dev:arm64 \
-        # liblo — OSC transport (oscpack may use it)
-        liblo-dev:arm64 \
         # Standard C/C++ runtime for ARM64
         libc6-dev:arm64 \
         libstdc++-13-dev:arm64 \
     && rm -rf /var/lib/apt/lists/*
 
-# ── 4. libevl — EVL real-time userspace library for ARM64 ─────────────────────
+# ── 4. CMake toolchain and build scripts (needed by steps 5 & 6) ──────────────
+# Copied early so the cross-compilation toolchain is available when building
+# EVL, raspa, and any other native ARM64 library below.
+
+COPY toolchain-aarch64-elk.cmake /opt/toolchain-aarch64-elk.cmake
+COPY scripts/ /opt/scripts/
+RUN chmod +x /opt/scripts/*.sh
+
+# ── 5. libevl — EVL real-time userspace library for ARM64 ─────────────────────
 # EVL is the modern real-time layer used by Elk Audio OS (replaces Xenomai 3).
-# Sushi links against libevl when SUSHI_RASPA_FLAVOR=evl (the default).
+# Sushi and raspa both link against libevl.
 #
-# The libevl source bundles its own kernel UAPI headers, so no separate
-# kernel source tree is required for the userspace build.
+# The libevl source bundles its own kernel UAPI headers — no kernel source tree
+# needed for the userspace build.
 #
 # Adjust EVL_REF to match the EVL kernel version running on your device.
 
@@ -126,20 +118,36 @@ RUN git clone --depth 1 --branch "${EVL_REF}" "${EVL_GIT}" /tmp/libevl-src \
              prefix=/usr \
     && rm -rf /tmp/libevl-src /tmp/libevl-build
 
-# ── 5. raspa placeholder ───────────────────────────────────────────────────────
-# raspa is not publicly available. See the header comment for how to provide it.
-# The build scripts will warn if libraspa.so is missing.
+# ── 6. raspa — Elk Audio real-time audio library ──────────────────────────────
+# raspa is the userspace audio driver for Elk Audio OS: it sits between the
+# EVL real-time kernel thread and Sushi's audio callback, providing hard-RT
+# deterministic buffer delivery.
+#
+# Both raspa and its submodule audio-control-protocol are public on GitHub.
+# fifo (third-party/fifo) is vendored directly in the raspa repo.
+#
+# RASPA_WITH_PIPEWIRE is OFF: enable if your Elk OS uses PipeWire and set
+# SUSHI_LINK_WITH_PIPEWIRE=ON in the Sushi build as well.
 
-RUN mkdir -p \
-        /opt/elk-sysroot/usr/lib \
-        /opt/elk-sysroot/usr/include/raspa
+ARG RASPA_GIT="https://github.com/elk-audio/raspa.git"
+ARG RASPA_REF="main"
 
-# Uncomment once you've placed raspa files in docker/raspa/:
-# COPY raspa/libraspa.so  /opt/elk-sysroot/usr/lib/libraspa.so
-# COPY raspa/include/      /opt/elk-sysroot/usr/include/raspa/
+RUN git clone --depth 1 --branch "${RASPA_REF}" "${RASPA_GIT}" /tmp/raspa-src \
+    && git -C /tmp/raspa-src submodule update --init --recursive \
+    && cmake /tmp/raspa-src \
+             -B /tmp/raspa-build \
+             -DCMAKE_TOOLCHAIN_FILE=/opt/toolchain-aarch64-elk.cmake \
+             -DCMAKE_BUILD_TYPE=Release \
+             -DRASPA_WITH_APPS=OFF \
+             -DRASPA_WITH_TESTS=OFF \
+             -DRASPA_WITH_EVL=ON \
+             -DRASPA_WITH_PIPEWIRE=OFF \
+    && cmake --build /tmp/raspa-build -j"$(nproc)" \
+    && cmake --install /tmp/raspa-build --prefix /opt/elk-sysroot/usr \
+    && rm -rf /tmp/raspa-src /tmp/raspa-build
 
-# ── 6. JUCE ───────────────────────────────────────────────────────────────────
-# JUCE is installed as a CMake package so plugin CMakeLists.txt can use:
+# ── 7. JUCE ───────────────────────────────────────────────────────────────────
+# Installed as a CMake package so plugin CMakeLists.txt can use:
 #   find_package(JUCE CONFIG REQUIRED)
 # JUCE modules are INTERFACE/source targets — they compile with the cross-
 # compiler at plugin build time; the install step only copies sources and
@@ -162,14 +170,10 @@ RUN wget -q -O /tmp/juce.zip \
 
 ENV JUCE_PATH="/opt/JUCE"
 
-# ── 7. vcpkg ──────────────────────────────────────────────────────────────────
+# ── 8. vcpkg ──────────────────────────────────────────────────────────────────
 # vcpkg cross-compiles CMake-findable packages (gRPC, libsndfile, lv2, lilv)
-# for ARM64 using the arm64-elk-linux triplet (copied below).
-# The triplet chainloads toolchain-aarch64-elk.cmake which sets the cross-
-# compiler and ARM64 sysroot paths.
-#
-# Pre-install the host (x64-linux) triplet packages that vcpkg uses as build
-# tools (protoc, grpc_cpp_plugin) — these are built natively for x86_64.
+# for ARM64 using the arm64-elk-linux triplet, which chainloads
+# toolchain-aarch64-elk.cmake so every port uses the ARM64 cross-compiler.
 
 ENV VCPKG_ROOT="/opt/vcpkg"
 ENV VCPKG_DISABLE_METRICS=1
@@ -177,12 +181,7 @@ ENV VCPKG_DISABLE_METRICS=1
 RUN git clone --depth 1 https://github.com/microsoft/vcpkg.git "${VCPKG_ROOT}" \
     && "${VCPKG_ROOT}/bootstrap-vcpkg.sh" -disableMetrics
 
-# ── 8. Toolchain files and build scripts ──────────────────────────────────────
-
-COPY toolchain-aarch64-elk.cmake /opt/toolchain-aarch64-elk.cmake
 COPY triplets/arm64-elk-linux.cmake "${VCPKG_ROOT}/triplets/community/arm64-elk-linux.cmake"
-COPY scripts/ /opt/scripts/
-RUN chmod +x /opt/scripts/*.sh
 
 # ── 9. Environment ────────────────────────────────────────────────────────────
 
@@ -193,7 +192,7 @@ ENV AR="aarch64-linux-gnu-ar"
 ENV STRIP="aarch64-linux-gnu-strip"
 ENV OBJCOPY="aarch64-linux-gnu-objcopy"
 
-# ELK_SYSROOT: overlay for raspa, libevl, and any other libs not in multiarch.
+# Sysroot overlay: libevl, raspa, and any other libs built above.
 ENV ELK_SYSROOT="/opt/elk-sysroot"
 
 # vcpkg cross-compilation triplets

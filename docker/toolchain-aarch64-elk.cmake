@@ -65,6 +65,19 @@ set(ENV{PKG_CONFIG_LIBDIR}
     "/opt/elk-sysroot/usr/lib/pkgconfig:/usr/lib/aarch64-linux-gnu/pkgconfig")
 set(ENV{PKG_CONFIG_SYSROOT_DIR} "/")
 
+# ── Linker search paths ───────────────────────────────────────────────────────
+# Explicitly add the sysroot overlay and multiarch lib dirs to the linker
+# search path. This is required for libraries linked by name (e.g. raspa's
+# `target_link_libraries(raspa PRIVATE evl)`) where no find_library() is
+# called — the linker must locate libevl.so/.a on its own.
+
+set(CMAKE_EXE_LINKER_FLAGS_INIT
+    "-L/opt/elk-sysroot/usr/lib -L/usr/lib/aarch64-linux-gnu")
+set(CMAKE_SHARED_LINKER_FLAGS_INIT
+    "-L/opt/elk-sysroot/usr/lib -L/usr/lib/aarch64-linux-gnu")
+set(CMAKE_MODULE_LINKER_FLAGS_INIT
+    "-L/opt/elk-sysroot/usr/lib -L/usr/lib/aarch64-linux-gnu")
+
 # ── JUCE headless / cross-compilation defaults ────────────────────────────────
 # These can be overridden per-target in the plugin CMakeLists.txt.
 # VST3_AUTO_MANIFEST: must be OFF when cross-compiling — cmake would otherwise

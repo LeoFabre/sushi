@@ -11,9 +11,6 @@
 # Prerequisites (inside the container):
 #   - git submodules must be initialised in SUSHI_SRC:
 #       git submodule update --init --recursive
-#   - To enable RASPA, mount libraspa.so from your device at container start:
-#       docker run -v /path/to/libraspa.so:/opt/elk-sysroot/usr/lib/libraspa.so ...
-#     Without it, Sushi is built without RASPA (still functional via offline/OSC).
 
 set -euo pipefail
 
@@ -21,27 +18,10 @@ SUSHI_SRC="${1:-/workspace/sushi}"
 BUILD_DIR="${2:-/workspace/build-sushi}"
 shift 2 2>/dev/null || true   # remaining args forwarded to cmake
 
-# ── Sanity checks ──────────────────────────────────────────────────────────────
-
 if [[ ! -f "${SUSHI_SRC}/CMakeLists.txt" ]]; then
     echo "ERROR: Sushi source not found at ${SUSHI_SRC}" >&2
     exit 1
 fi
-
-if [[ ! -f "/opt/elk-sysroot/usr/lib/libraspa.so" ]] \
-&& [[ ! -f "/opt/elk-sysroot/usr/lib/libraspa.so.0" ]]; then
-    echo ""
-    echo "WARNING: libraspa.so not found — building WITHOUT RASPA support."
-    echo "  Mount it from your PocketBeagle2 to enable RASPA:"
-    echo "    docker run -v /host/path/libraspa.so:/opt/elk-sysroot/usr/lib/libraspa.so ..."
-    echo ""
-    RASPA_ON=OFF
-else
-    echo "raspa found — building with RASPA/EVL support."
-    RASPA_ON=ON
-fi
-
-# ── Configure ─────────────────────────────────────────────────────────────────
 
 mkdir -p "${BUILD_DIR}"
 
@@ -52,7 +32,7 @@ cmake "${SUSHI_SRC}" \
     -DVCPKG_TARGET_TRIPLET="${VCPKG_TARGET_TRIPLET:-arm64-elk-linux}" \
     -DVCPKG_HOST_TRIPLET="${VCPKG_HOST_TRIPLET:-x64-linux}" \
     -DCMAKE_BUILD_TYPE=Release \
-    -DSUSHI_WITH_RASPA="${RASPA_ON}" \
+    -DSUSHI_WITH_RASPA=ON \
     -DSUSHI_RASPA_FLAVOR=evl \
     -DSUSHI_BUILD_TWINE=OFF \
     -DSUSHI_WITH_JACK=OFF \
@@ -67,8 +47,6 @@ cmake "${SUSHI_SRC}" \
     -DSUSHI_WITH_UNIT_TESTS=OFF \
     -DSUSHI_BUILD_WITH_SANITIZERS=OFF \
     "$@"
-
-# ── Build ─────────────────────────────────────────────────────────────────────
 
 cmake --build "${BUILD_DIR}" -j"$(nproc)"
 
