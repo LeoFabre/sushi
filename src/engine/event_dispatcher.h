@@ -132,7 +132,6 @@ private:
     ParameterManager            _parameter_manager;
     int                         _parameter_update_count;
     Time                        _last_rt_event_time{};
-    bool                        _warned_no_rt_clock{false};
 
     std::vector<EventPoster*> _keyboard_event_listeners;
     std::vector<EventPoster*> _parameter_change_listeners;

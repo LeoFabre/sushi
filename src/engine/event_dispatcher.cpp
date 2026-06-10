@@ -62,13 +62,6 @@ EventDispatcher::~EventDispatcher()
 
 void EventDispatcher::post_event(std::unique_ptr<Event> event)
 {
-    static std::atomic<int> diag_count{0};
-    if (int n = diag_count.fetch_add(1); n < 20)
-    {
-        ELKLOG_LOG_WARNING("DIAG post_event #{}: param_change={} async={} rt={} engine_notif={}",
-                           n, event->is_parameter_change_event(), event->process_asynchronously(),
-                           event->maps_to_rt_event(), event->is_engine_notification());
-    }
     _in_queue.push(std::move(event));
 }
 
@@ -130,14 +123,6 @@ Status EventDispatcher::subscribe_to_engine_notifications(EventPoster*receiver)
 
 int EventDispatcher::dispatch(std::unique_ptr<Event> event)
 {
-    static std::atomic<int> diag_count{0};
-    if (int n = diag_count.fetch_add(1); n < 20)
-    {
-        ELKLOG_LOG_WARNING("DIAG dispatch #{}: param_change={} async={} rt={} engine_notif={} param_notif={}",
-                           n, event->is_parameter_change_event(), event->process_asynchronously(),
-                           event->maps_to_rt_event(), event->is_engine_notification(),
-                           event->is_parameter_change_notification());
-    }
     int status = EventStatus::NOT_HANDLED;
 
     if (event->process_asynchronously())
@@ -225,17 +210,16 @@ void EventDispatcher::_event_loop()
             _process_rt_event(rt_event);
         }
 
-        // Send updates for any parameters that have changed
+        // Send updates for any parameters that have changed.
+        // The rate limit runs against a steady clock rather than the rt event
+        // time: with embedded reactive frontends (Bela) the rt time freezes
+        // right after startup (engine SYNC events stop reaching this queue),
+        // which used to silently suppress every parameter notification.
         if (_parameter_update_count++ >= PARAMETER_UPDATE_RATE)
         {
-            if (_last_rt_event_time == Time(0) && !_warned_no_rt_clock &&
-                !_parameter_manager.parameter_change_queue_empty())
-            {
-                _warned_no_rt_clock = true;
-                ELKLOG_LOG_WARNING("Parameter notifications output without rt sync time "
-                                   "(engine SYNC events not reaching the dispatcher)");
-            }
-            _parameter_manager.output_parameter_notifications(this, _last_rt_event_time);
+            auto notification_time = std::chrono::duration_cast<Time>(
+                std::chrono::steady_clock::now().time_since_epoch());
+            _parameter_manager.output_parameter_notifications(this, notification_time);
             _parameter_update_count = 0;
         }
 

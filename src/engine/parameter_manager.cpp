@@ -73,14 +73,6 @@ void ParameterManager::untrack_parameters(ObjectId processor_id)
 
 void ParameterManager::mark_parameter_changed(ObjectId processor_id, ObjectId parameter_id, Time timestamp)
 {
-    static bool diag_logged = false;
-    if (!diag_logged)
-    {
-        diag_logged = true;
-        ELKLOG_LOG_WARNING("DIAG mark_parameter_changed: proc {} param {} t={}us",
-                           processor_id, parameter_id,
-                           std::chrono::duration_cast<std::chrono::microseconds>(timestamp).count());
-    }
     _parameter_change_queue.push_back(ParameterUpdate{processor_id, parameter_id, timestamp});
 }
 
@@ -107,25 +99,6 @@ void ParameterManager::output_parameter_notifications(dispatcher::BaseEventDispa
 
 void ParameterManager::_output_parameter_notifications(dispatcher::BaseEventDispatcher* dispatcher, Time timestamp)
 {
-    /* Embedded/reactive frontends may never deliver engine SYNC events, leaving the
-     * dispatcher's rt-event time at 0 forever. Time-based rate limiting would then
-     * silently suppress every notification, so skip it in that case. */
-    const bool no_rt_clock = (timestamp == Time(0));
-
-    static bool diag_logged = false;
-    if (!diag_logged && !_parameter_change_queue.empty())
-    {
-        diag_logged = true;
-        const auto& f = _parameter_change_queue.front();
-        ELKLOG_LOG_WARNING("DIAG param notif pass: ts={}us queue={} tracked_procs={} "
-                           "first(proc={} param={} t={}us tracked={})",
-                           std::chrono::duration_cast<std::chrono::microseconds>(timestamp).count(),
-                           _parameter_change_queue.size(), _parameters.size(),
-                           f.processor_id, f.parameter_id,
-                           std::chrono::duration_cast<std::chrono::microseconds>(f.update_time).count(),
-                           _parameters.count(f.processor_id));
-    }
-
     auto i = _parameter_change_queue.begin();
     auto swap_iter = i;
     while (i != _parameter_change_queue.end())
@@ -146,7 +119,7 @@ void ParameterManager::_output_parameter_notifications(dispatcher::BaseEventDisp
                 auto& param_entry = param_node->second;
                 /* Send update if the update time has passed and the last update was sent
                  * longer than _update_rate ago */
-                if (no_rt_clock || (i->update_time <= timestamp && (param_entry.last_update + _update_rate) <= timestamp))
+                if (i->update_time <= timestamp && (param_entry.last_update + _update_rate) <= timestamp)
                 {
                     if (auto processor = _processors->processor(i->processor_id))
                     {
@@ -178,15 +151,13 @@ void ParameterManager::_output_parameter_notifications(dispatcher::BaseEventDisp
 
 void ParameterManager::_output_processor_notifications(dispatcher::BaseEventDispatcher* dispatcher, Time timestamp)
 {
-    const bool no_rt_clock = (timestamp == Time(0));
-
     auto i = _processor_change_queue.begin();
     auto swap_iter = i;
     while (i != _processor_change_queue.end())
     {
         /* When notifying all parameters of a processor, we ignore the last_update time
          * and send a notification anyway, regardless if one was sent recently */
-        if (no_rt_clock || i->update_time <= timestamp)
+        if (i->update_time <= timestamp)
         {
             if (auto processor = _processors->processor(i->processor_id))
             {
