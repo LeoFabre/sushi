@@ -213,6 +213,13 @@ void EventDispatcher::_event_loop()
         // Send updates for any parameters that have changed
         if (_parameter_update_count++ >= PARAMETER_UPDATE_RATE)
         {
+            if (_last_rt_event_time == Time(0) && !_warned_no_rt_clock &&
+                !_parameter_manager.parameter_change_queue_empty())
+            {
+                _warned_no_rt_clock = true;
+                ELKLOG_LOG_WARNING("Parameter notifications output without rt sync time "
+                                   "(engine SYNC events not reaching the dispatcher)");
+            }
             _parameter_manager.output_parameter_notifications(this, _last_rt_event_time);
             _parameter_update_count = 0;
         }
