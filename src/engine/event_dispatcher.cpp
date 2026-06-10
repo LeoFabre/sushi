@@ -62,6 +62,13 @@ EventDispatcher::~EventDispatcher()
 
 void EventDispatcher::post_event(std::unique_ptr<Event> event)
 {
+    static std::atomic<int> diag_count{0};
+    if (int n = diag_count.fetch_add(1); n < 20)
+    {
+        ELKLOG_LOG_WARNING("DIAG post_event #{}: param_change={} async={} rt={} engine_notif={}",
+                           n, event->is_parameter_change_event(), event->process_asynchronously(),
+                           event->maps_to_rt_event(), event->is_engine_notification());
+    }
     _in_queue.push(std::move(event));
 }
 
@@ -123,6 +130,14 @@ Status EventDispatcher::subscribe_to_engine_notifications(EventPoster*receiver)
 
 int EventDispatcher::dispatch(std::unique_ptr<Event> event)
 {
+    static std::atomic<int> diag_count{0};
+    if (int n = diag_count.fetch_add(1); n < 20)
+    {
+        ELKLOG_LOG_WARNING("DIAG dispatch #{}: param_change={} async={} rt={} engine_notif={} param_notif={}",
+                           n, event->is_parameter_change_event(), event->process_asynchronously(),
+                           event->maps_to_rt_event(), event->is_engine_notification(),
+                           event->is_parameter_change_notification());
+    }
     int status = EventStatus::NOT_HANDLED;
 
     if (event->process_asynchronously())
