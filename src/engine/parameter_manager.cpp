@@ -22,6 +22,10 @@
 #include "library/processor.h"
 #include "engine/base_processor_container.h"
 
+#include "elklog/static_logger.h"
+
+ELKLOG_GET_LOGGER_WITH_MODULE_NAME("param manager");
+
 namespace sushi::internal {
 
 inline void send_parameter_notification(ObjectId processor_id,
