@@ -22,6 +22,7 @@
 
 #include "send_return_factory.h"
 #include "send_plugin.h"
+#include "multi_send_plugin.h"
 #include "return_plugin.h"
 
 namespace sushi::internal {
@@ -65,6 +66,10 @@ SendReturnFactory::new_instance(const PluginInfo& plugin_info, HostControl& host
     if (plugin_info.uid == send_plugin::SendPlugin::static_uid())
     {
         processor = std::make_shared<send_plugin::SendPlugin>(host_control, this);
+    }
+    else if (plugin_info.uid == multi_send_plugin::MultiSendPlugin::static_uid())
+    {
+        processor = std::make_shared<multi_send_plugin::MultiSendPlugin>(host_control, this);
     }
     else if (plugin_info.uid == return_plugin::ReturnPlugin::static_uid())
     {

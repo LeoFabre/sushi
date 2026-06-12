@@ -7,6 +7,7 @@
 
 #include "plugins/send_return_factory.cpp"
 #include "plugins/send_plugin.cpp"
+#include "plugins/multi_send_plugin.cpp"
 #include "plugins/return_plugin.cpp"
 
 namespace sushi::internal::send_plugin
@@ -29,6 +30,30 @@ public:
 
 private:
     SendPlugin& _plugin;
+};
+
+}
+
+namespace sushi::internal::multi_send_plugin
+{
+
+class Accessor
+{
+public:
+    explicit Accessor(MultiSendPlugin& plugin) : _plugin(plugin) {}
+
+    [[nodiscard]] return_plugin::ReturnPlugin* destination(int slot)
+    {
+        return _plugin._slots[slot].destination;
+    }
+
+    [[nodiscard]] ObjectId destination_property_id(int slot)
+    {
+        return _plugin._slots[slot].destination_property_id;
+    }
+
+private:
+    MultiSendPlugin& _plugin;
 };
 
 }
@@ -311,3 +336,161 @@ TEST_F(TestSendReturnPlugins, TestRampedProcessing)
     EXPECT_LT(buffer_2.channel(0)[AUDIO_CHUNK_SIZE -1], 1.0f);
     EXPECT_GT(buffer_2.channel(0)[AUDIO_CHUNK_SIZE / 2], buffer_2.channel(0)[AUDIO_CHUNK_SIZE - 1]);
  }
+class TestMultiSendPlugin : public ::testing::Test
+{
+protected:
+    TestMultiSendPlugin() = default;
+
+    void SetUp() override
+    {
+        ASSERT_EQ(ProcessorReturnCode::OK, _multi_send.init(TEST_SAMPLERATE));
+        _multi_send.set_channels(2, 2);
+        _multi_send.set_active_rt_processing(true, 0);
+
+        PluginInfo info{.uid = "sushi.testing.return", .path = "", .type = PluginType::INTERNAL};
+
+        auto [status_1, return_1] = _factory.new_instance(info, _host_ctrl, TEST_SAMPLERATE);
+        ASSERT_EQ(ProcessorReturnCode::OK, status_1);
+        auto [status_2, return_2] = _factory.new_instance(info, _host_ctrl, TEST_SAMPLERATE);
+        ASSERT_EQ(ProcessorReturnCode::OK, status_2);
+
+        _return_1 = std::static_pointer_cast<ReturnPlugin>(return_1);
+        _return_2 = std::static_pointer_cast<ReturnPlugin>(return_2);
+
+        _return_1->set_name("return_1");
+        _return_2->set_name("return_2");
+
+        for (auto& r : {_return_1, _return_2})
+        {
+            r->set_channels(2, 2);
+            r->set_active_rt_processing(true, 1);
+        }
+    }
+
+    ObjectId _dest_property_id(int slot)
+    {
+        return _multi_send.parameter_from_name("destination_" + std::to_string(slot + 1))->id();
+    }
+
+    ObjectId _gain_parameter_id(int slot)
+    {
+        return _multi_send.parameter_from_name("gain_" + std::to_string(slot + 1))->id();
+    }
+
+    SendReturnFactory   _factory;
+    HostControlMockup   _host_control_mockup;
+    HostControl         _host_ctrl {_host_control_mockup.make_host_control_mockup(TEST_SAMPLERATE)};
+
+    multi_send_plugin::MultiSendPlugin _multi_send {_host_ctrl, &_factory};
+    std::shared_ptr<ReturnPlugin> _return_1;
+    std::shared_ptr<ReturnPlugin> _return_2;
+
+    sushi::internal::multi_send_plugin::Accessor _accessor {_multi_send};
+};
+
+TEST_F(TestMultiSendPlugin, TestDestinationSetting)
+{
+    // All slots start inactive
+    for (int slot = 0; slot < multi_send_plugin::MAX_SEND_DESTINATIONS; ++slot)
+    {
+        EXPECT_EQ(nullptr, _accessor.destination(slot));
+        EXPECT_EQ(_dest_property_id(slot), _accessor.destination_property_id(slot));
+    }
+
+    auto status = _multi_send.set_property_value(_dest_property_id(0), "return_1");
+    EXPECT_EQ(ProcessorReturnCode::OK, status);
+    status = _multi_send.set_property_value(_dest_property_id(1), "return_2");
+    EXPECT_EQ(ProcessorReturnCode::OK, status);
+
+    EXPECT_EQ(_return_1.get(), _accessor.destination(0));
+    EXPECT_EQ(_return_2.get(), _accessor.destination(1));
+    EXPECT_EQ("return_1", _multi_send.property_value(_dest_property_id(0)).second);
+
+    // Setting an empty name deactivates the slot
+    status = _multi_send.set_property_value(_dest_property_id(0), "");
+    EXPECT_EQ(ProcessorReturnCode::OK, status);
+    EXPECT_EQ(nullptr, _accessor.destination(0));
+
+    // Destroying a return automatically unlinks all slots pointing to it
+    status = _multi_send.set_property_value(_dest_property_id(2), "return_2");
+    EXPECT_EQ(ProcessorReturnCode::OK, status);
+    EXPECT_EQ(_return_2.get(), _accessor.destination(2));
+
+    _return_2.reset();
+    EXPECT_EQ(nullptr, _accessor.destination(1));
+    EXPECT_EQ(nullptr, _accessor.destination(2));
+    EXPECT_EQ("", _multi_send.property_value(_dest_property_id(1)).second);
+}
+
+TEST_F(TestMultiSendPlugin, TestProcessingToMultipleDestinations)
+{
+    ChunkSampleBuffer in_buffer(2);
+    ChunkSampleBuffer out_buffer(2);
+    test_utils::fill_sample_buffer(in_buffer, 1.0f);
+
+    // Test that processing without any destination doesn't break and passes through
+    _multi_send.process_audio(in_buffer, out_buffer);
+    test_utils::assert_buffer_value(1.0f, out_buffer);
+
+    ASSERT_EQ(ProcessorReturnCode::OK, _multi_send.set_property_value(_dest_property_id(0), "return_1"));
+    ASSERT_EQ(ProcessorReturnCode::OK, _multi_send.set_property_value(_dest_property_id(1), "return_2"));
+
+    // Slot 1 at 0 dB (unity), slot 2 at -48 dB
+    constexpr float GAIN_1_NORM = 120.0f / 144.0f;
+    constexpr float GAIN_2_NORM = 0.5f;
+    constexpr float GAIN_2_LIN = 0.00398107f; // -48 dB
+
+    auto event = RtEvent::make_parameter_change_event(_multi_send.id(), 0, _gain_parameter_id(0), GAIN_1_NORM);
+    _multi_send.process_event(event);
+    event = RtEvent::make_parameter_change_event(_multi_send.id(), 0, _gain_parameter_id(1), GAIN_2_NORM);
+    _multi_send.process_event(event);
+
+    // Process enough chunks for the gain smoothers to settle, advancing the
+    // transport so the return plugins swap buffers every chunk
+    for (int i = 0; i < 300; ++i)
+    {
+        _host_control_mockup._transport.set_time(Time(i + 1), static_cast<int64_t>(i + 1) * AUDIO_CHUNK_SIZE);
+        _multi_send.process_audio(in_buffer, out_buffer);
+    }
+
+    // The audio is passed through unchanged on the multi_send's own output
+    test_utils::assert_buffer_value(1.0f, out_buffer);
+
+    // Read the last chunk from both returns and verify the gains
+    _return_1->process_audio(in_buffer, out_buffer);
+    EXPECT_NEAR(1.0f, out_buffer.channel(0)[0], 1.0e-3);
+    EXPECT_NEAR(1.0f, out_buffer.channel(1)[AUDIO_CHUNK_SIZE - 1], 1.0e-3);
+
+    _return_2->process_audio(in_buffer, out_buffer);
+    EXPECT_NEAR(GAIN_2_LIN, out_buffer.channel(0)[0], 1.0e-5);
+    EXPECT_NEAR(GAIN_2_LIN, out_buffer.channel(1)[AUDIO_CHUNK_SIZE - 1], 1.0e-5);
+}
+
+TEST_F(TestMultiSendPlugin, TestInactiveSlotsAreSkipped)
+{
+    ChunkSampleBuffer in_buffer(2);
+    ChunkSampleBuffer out_buffer(2);
+    test_utils::fill_sample_buffer(in_buffer, 1.0f);
+
+    // Only slot 8 is active, all others inactive
+    ASSERT_EQ(ProcessorReturnCode::OK,
+              _multi_send.set_property_value(_dest_property_id(multi_send_plugin::MAX_SEND_DESTINATIONS - 1), "return_1"));
+
+    auto event = RtEvent::make_parameter_change_event(_multi_send.id(), 0,
+                                                      _gain_parameter_id(multi_send_plugin::MAX_SEND_DESTINATIONS - 1),
+                                                      120.0f / 144.0f);
+    _multi_send.process_event(event);
+
+    for (int i = 0; i < 300; ++i)
+    {
+        _host_control_mockup._transport.set_time(Time(i + 1), static_cast<int64_t>(i + 1) * AUDIO_CHUNK_SIZE);
+        _multi_send.process_audio(in_buffer, out_buffer);
+    }
+
+    _return_1->process_audio(in_buffer, out_buffer);
+    EXPECT_NEAR(1.0f, out_buffer.channel(0)[0], 1.0e-3);
+
+    // return_2 was never sent to
+    _return_2->process_audio(in_buffer, out_buffer);
+    EXPECT_FLOAT_EQ(0.0f, out_buffer.channel(0)[0]);
+}

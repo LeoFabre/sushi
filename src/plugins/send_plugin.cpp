@@ -78,6 +78,11 @@ void SendPlugin::clear_destination()
     set_property_value(DEST_PROPERTY_ID, DEFAULT_DEST);
 }
 
+void SendPlugin::return_deleted(return_plugin::ReturnPlugin* /*destination*/)
+{
+    clear_destination();
+}
+
 void SendPlugin::_set_destination(return_plugin::ReturnPlugin* destination)
 {
     assert(destination);
