@@ -210,10 +210,16 @@ void EventDispatcher::_event_loop()
             _process_rt_event(rt_event);
         }
 
-        // Send updates for any parameters that have changed
+        // Send updates for any parameters that have changed.
+        // The rate limit runs against a steady clock rather than the rt event
+        // time: with embedded reactive frontends (Bela) the rt time freezes
+        // right after startup (engine SYNC events stop reaching this queue),
+        // which used to silently suppress every parameter notification.
         if (_parameter_update_count++ >= PARAMETER_UPDATE_RATE)
         {
-            _parameter_manager.output_parameter_notifications(this, _last_rt_event_time);
+            auto notification_time = std::chrono::duration_cast<Time>(
+                std::chrono::steady_clock::now().time_since_epoch());
+            _parameter_manager.output_parameter_notifications(this, notification_time);
             _parameter_update_count = 0;
         }
 
