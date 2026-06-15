@@ -676,6 +676,14 @@ bool Vst3xWrapper::_register_parameters()
                 _program_change_parameter.supported = true;
                 ELKLOG_LOG_INFO("We have a program change parameter at {}", info.id);
             }
+            else if (info.flags & Steinberg::Vst::ParameterInfo::kIsHidden)
+            {
+                /* Don't expose hidden parameters to controllers. DPF plugins with MIDI
+                 * input declare 16 ch x 130 hidden "MIDI Ch. N CC M" mapping parameters
+                 * (the VST3 MIDI CC mechanism) — registering them bloats the parameter
+                 * list for every external controller. */
+                ELKLOG_LOG_DEBUG("Skipping hidden parameter {}, id {}", param_name, info.id);
+            }
             else if (info.stepCount > 0 &&
                      register_parameter(new IntParameterDescriptor(_make_unique_parameter_name(param_name),
                                                                    param_name,
