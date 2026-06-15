@@ -22,6 +22,10 @@
 #include "library/processor.h"
 #include "engine/base_processor_container.h"
 
+#include "elklog/static_logger.h"
+
+ELKLOG_GET_LOGGER_WITH_MODULE_NAME("param manager");
+
 namespace sushi::internal {
 
 inline void send_parameter_notification(ObjectId processor_id,
@@ -99,7 +103,14 @@ void ParameterManager::_output_parameter_notifications(dispatcher::BaseEventDisp
     auto swap_iter = i;
     while (i != _parameter_change_queue.end())
     {
-        if (auto proc_node = _parameters.find(i->processor_id); proc_node != _parameters.end())
+        auto proc_node = _parameters.find(i->processor_id);
+        if (proc_node == _parameters.end())
+        {
+            /* Processor not tracked (e.g. created before notification handling ran) */
+            track_parameters(i->processor_id);
+            proc_node = _parameters.find(i->processor_id);
+        }
+        if (proc_node != _parameters.end())
         {
             auto& param_entries = proc_node->second;
 
@@ -150,6 +161,10 @@ void ParameterManager::_output_processor_notifications(dispatcher::BaseEventDisp
         {
             if (auto processor = _processors->processor(i->processor_id))
             {
+                if (_parameters.count(i->processor_id) == 0)
+                {
+                    track_parameters(i->processor_id);
+                }
                 auto& param_entries = _parameters[i->processor_id];
                 for (auto& p: param_entries)
                 {
