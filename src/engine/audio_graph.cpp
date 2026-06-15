@@ -41,7 +41,7 @@ void external_render_callback(void* data)
     {
         track->render();
     }
-    node->timer->stop_timer(start, (-2 - node->thread_id)); // Thread ids are counted backwards from -2
+    node->timer->stop_timer_rt_safe(start, (-2 - node->thread_id)); // Thread ids are counted backwards from -2
 }
 
 AudioGraph::AudioGraph(int threads,
