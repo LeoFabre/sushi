@@ -25,6 +25,7 @@
 
 #include "library/spinlock.h"
 #include "send_return_factory.h"
+#include "sender_interface.h"
 #include "library/internal_plugin.h"
 
 ELK_PUSH_WARNING
@@ -54,9 +55,9 @@ public:
 
     void send_audio_with_ramp(const ChunkSampleBuffer& buffer, int start_channel, float start_gain, float end_gain, int thread_id);
 
-    void add_sender(send_plugin::SendPlugin* sender);
+    void add_sender(SenderInterface* sender);
 
-    void remove_sender(send_plugin::SendPlugin* sender);
+    void remove_sender(SenderInterface* sender);
 
     // From Processor
     ProcessorReturnCode init(float sample_rate) override;
@@ -94,7 +95,7 @@ private:
 
     SpinLock                              _buffer_lock;
 
-    std::vector<send_plugin::SendPlugin*> _senders;
+    std::vector<SenderInterface*>         _senders;
 
     BypassManager                         _bypass_manager;
 

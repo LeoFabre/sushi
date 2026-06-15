@@ -14,14 +14,16 @@
  */
 
 /**
- * @brief Aux send plugin to send audio to a return plugin
+ * @brief Aux send plugin that can send audio to multiple return plugins
+ *        with an individual gain per destination, using a single processor
+ *        instance instead of a chain of single-destination sends.
  * @Copyright 2017-2023 Elk Audio AB, Stockholm
  */
 
-#ifndef SUSHI_SEND_PLUGIN_H
-#define SUSHI_SEND_PLUGIN_H
+#ifndef SUSHI_MULTI_SEND_PLUGIN_H
+#define SUSHI_MULTI_SEND_PLUGIN_H
 
-#include <atomic>
+#include <array>
 
 #include "sushi/constants.h"
 
@@ -38,20 +40,18 @@ class SendReturnFactory;
 
 namespace return_plugin { class ReturnPlugin; }
 
-constexpr int MAX_SEND_CHANNELS = MAX_TRACK_CHANNELS;
+namespace multi_send_plugin {
 
-namespace send_plugin {
+constexpr int MAX_SEND_DESTINATIONS = 8;
 
 class Accessor;
 
-class SendPlugin : public InternalPlugin, public UidHelper<SendPlugin>, public SenderInterface
+class MultiSendPlugin : public InternalPlugin, public UidHelper<MultiSendPlugin>, public SenderInterface
 {
 public:
-    SendPlugin(HostControl host_control, SendReturnFactory* manager);
+    MultiSendPlugin(HostControl host_control, SendReturnFactory* manager);
 
-    ~SendPlugin() override;
-
-    void clear_destination();
+    ~MultiSendPlugin() override;
 
     // From SenderInterface
     void return_deleted(return_plugin::ReturnPlugin* destination) override;
@@ -76,27 +76,30 @@ public:
 private:
     friend Accessor;
 
-    void _set_destination(return_plugin::ReturnPlugin* destination);
+    struct SendSlot
+    {
+        return_plugin::ReturnPlugin* destination{nullptr};
+        FloatParameterValue*         gain_parameter{nullptr};
+        ValueSmootherFilter<float>   gain_smoother;
+        ObjectId                     destination_property_id{0};
+    };
 
-    void _change_return_destination(const std::string& dest_name);
+    void _set_slot_destination(SendSlot& slot, return_plugin::ReturnPlugin* destination);
 
-    float                         _sample_rate;
-    return_plugin::ReturnPlugin*  _destination {nullptr};
+    void _change_slot_destination(SendSlot& slot, const std::string& dest_name);
 
-    FloatParameterValue*          _gain_parameter;
-    ValueSmootherFilter<float>    _gain_smoother;
+    int  _destination_use_count(const return_plugin::ReturnPlugin* destination) const;
 
-    IntParameterValue*            _channel_count_parameter;
-    IntParameterValue*            _start_channel_parameter;
-    IntParameterValue*            _dest_channel_parameter;
+    float                                     _sample_rate{0.0f};
+    std::array<SendSlot, MAX_SEND_DESTINATIONS> _slots;
 
     SendReturnFactory* _manager;
-    BypassManager _bypass_manager;
+    BypassManager      _bypass_manager;
 };
 
+} // end namespace multi_send_plugin
 } // end namespace sushi::internal
-} // end namespace send_plugin
 
 ELK_POP_WARNING
 
-#endif // SUSHI_SEND_PLUGIN_H
+#endif // SUSHI_MULTI_SEND_PLUGIN_H
