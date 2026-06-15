@@ -116,7 +116,8 @@ private:
 class AudioGraphControlService : public AudioGraphController::Service
 {
 public:
-    AudioGraphControlService(sushi::control::SushiControl* controller) : _controller{controller->audio_graph_controller()} {}
+    AudioGraphControlService(sushi::control::SushiControl* controller) : _controller{controller->audio_graph_controller()},
+                                                                         _parameter_controller{controller->parameter_controller()} {}
 
     grpc::Status GetAllProcessors(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::ProcessorInfoList* response) override;
     grpc::Status GetAllTracks(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::TrackInfoList* response) override;
@@ -127,6 +128,7 @@ public:
     grpc::Status GetProcessorInfo(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::ProcessorInfoResponse* response) override;
     grpc::Status GetProcessorBypassState(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::BoolResponse* response) override;
     grpc::Status GetProcessorState(grpc::ServerContext* context, const sushi_rpc::ProcessorIdentifier* request, sushi_rpc::ProcessorStateResponse* response) override;
+    grpc::Status GetFullState(grpc::ServerContext* context, const sushi_rpc::GenericVoidValue* request, sushi_rpc::FullGraphState* response) override;
     grpc::Status SetProcessorBypassState(grpc::ServerContext* context, const sushi_rpc::ProcessorBypassStateSetRequest* request, sushi_rpc::CommandResponse* response) override;
     grpc::Status SetProcessorState(grpc::ServerContext* context, const sushi_rpc::ProcessorStateSetRequest* request, sushi_rpc::CommandResponse* response) override;
     grpc::Status CreateTrack(grpc::ServerContext* context, const sushi_rpc::CreateTrackRequest* request, sushi_rpc::CommandResponse* response) override;
@@ -140,6 +142,7 @@ public:
 
 private:
     sushi::control::AudioGraphController* _controller;
+    sushi::control::ParameterController* _parameter_controller;
 };
 
 class ProgramControlService : public ProgramController::Service
