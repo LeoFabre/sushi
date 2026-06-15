@@ -30,6 +30,7 @@
 #include "plugins/wav_streamer_plugin.h"
 #include "plugins/mono_summing_plugin.h"
 #include "plugins/send_return_factory.h"
+#include "plugins/multi_send_plugin.h"
 #include "plugins/sample_delay_plugin.h"
 #include "plugins/stereo_mixer_plugin.h"
 #include "plugins/freeverb_plugin.h"
@@ -138,6 +139,7 @@ InternalProcessorFactory::new_instance(const PluginInfo &plugin_info,
                                        float sample_rate)
 {
     if (plugin_info.uid == send_plugin::SendPlugin::static_uid() ||
+        plugin_info.uid == multi_send_plugin::MultiSendPlugin::static_uid() ||
         plugin_info.uid == return_plugin::ReturnPlugin::static_uid())
     {
         return _send_return_factory->new_instance(plugin_info, host_control, sample_rate);
