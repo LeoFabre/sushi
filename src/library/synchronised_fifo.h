@@ -52,15 +52,16 @@ public:
 
     void wait_for_data(const std::chrono::milliseconds& timeout)
     {
+        std::unique_lock<std::mutex> lock(_queue_mutex);
         if (_queue.empty())
         {
-            std::unique_lock<std::mutex> lock(_wait_mutex);
             _notifier.wait_for(lock, timeout);
         }
     }
 
     bool empty()
     {
+        std::lock_guard<std::mutex> lock(_queue_mutex);
         return _queue.empty();
     }
 private:
