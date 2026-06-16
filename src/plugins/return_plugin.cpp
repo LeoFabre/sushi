@@ -46,7 +46,7 @@ ReturnPlugin::~ReturnPlugin()
     _manager->on_return_destruction(this);
     for (auto& sender : _senders)
     {
-        sender->clear_destination();
+        sender->return_deleted(this);
     }
 }
 
@@ -84,12 +84,12 @@ void ReturnPlugin::send_audio_with_ramp(const ChunkSampleBuffer& buffer, int sta
     }
 }
 
-void ReturnPlugin::add_sender(send_plugin::SendPlugin* sender)
+void ReturnPlugin::add_sender(SenderInterface* sender)
 {
     _senders.push_back(sender);
 }
 
-void ReturnPlugin::remove_sender(send_plugin::SendPlugin* sender)
+void ReturnPlugin::remove_sender(SenderInterface* sender)
 {
     _senders.erase(std::remove(_senders.begin(), _senders.end(), sender), _senders.end());
 }

@@ -642,6 +642,7 @@ set(SOURCE_FILES
     src/plugins/sample_player_plugin.cpp
     src/plugins/sample_player_voice.cpp
     src/plugins/sample_delay_plugin.cpp
+    src/plugins/multi_send_plugin.cpp
     src/plugins/send_plugin.cpp
     src/plugins/send_return_factory.cpp
     src/plugins/step_sequencer_plugin.cpp
