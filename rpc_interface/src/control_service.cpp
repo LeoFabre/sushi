@@ -1140,6 +1140,59 @@ grpc::Status AudioGraphControlService::GetProcessorState(grpc::ServerContext* /*
     return grpc::Status::OK;
 }
 
+grpc::Status AudioGraphControlService::GetFullState(grpc::ServerContext* /*context*/,
+                                                    const sushi_rpc::GenericVoidValue* /*request*/,
+                                                    sushi_rpc::FullGraphState* response)
+{
+    // One synchronous pass over the whole graph, all cached reads on the non-RT
+    // gRPC thread. Collapses the webapp hydration fan-out (GetAllTracks -> per-track
+    // GetTrackProcessors -> per-proc GetProcessorParameters -> 2*N GetParameterValue/
+    // AsString -> per-proc GetProcessorBypassState, ~1500 round-trips) into a single
+    // handler and response. See the W5 batch-graph-rpc design doc.
+    for (const auto& track : _controller->get_all_tracks())
+    {
+        auto* track_state = response->add_tracks();
+        to_grpc(*track_state->mutable_info(), track);
+
+        auto [proc_status, processors] = _controller->get_track_processors(track.id);
+        if (proc_status != sushi::control::ControlStatus::OK)
+        {
+            continue;
+        }
+        for (const auto& processor : processors)
+        {
+            auto* proc_state = track_state->add_processors();
+            to_grpc(*proc_state->mutable_info(), processor);
+            proc_state->set_bypassed(_controller->get_processor_bypass_state(processor.id).second);
+
+            auto [param_status, parameters] = _parameter_controller->get_processor_parameters(processor.id);
+            if (param_status == sushi::control::ControlStatus::OK)
+            {
+                for (const auto& parameter : parameters)
+                {
+                    auto* param_state = proc_state->add_parameters();
+                    to_grpc(*param_state->mutable_info(), parameter);
+                    param_state->set_normalized_value(_parameter_controller->get_parameter_value(processor.id, parameter.id).second);
+                    param_state->set_domain_value(_parameter_controller->get_parameter_value_in_domain(processor.id, parameter.id).second);
+                    param_state->set_formatted_value(_parameter_controller->get_parameter_value_as_string(processor.id, parameter.id).second);
+                }
+            }
+
+            auto [prop_status, properties] = _parameter_controller->get_processor_properties(processor.id);
+            if (prop_status == sushi::control::ControlStatus::OK)
+            {
+                for (const auto& property : properties)
+                {
+                    auto* prop_state = proc_state->add_properties();
+                    to_grpc(*prop_state->mutable_info(), property);
+                    prop_state->set_value(_parameter_controller->get_property_value(processor.id, property.id).second);
+                }
+            }
+        }
+    }
+    return grpc::Status::OK;
+}
+
 grpc::Status AudioGraphControlService::SetProcessorBypassState(grpc::ServerContext* /*context*/,
                                                                const sushi_rpc::ProcessorBypassStateSetRequest* request,
                                                                sushi_rpc::CommandResponse* response)
