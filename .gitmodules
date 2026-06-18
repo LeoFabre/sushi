@@ -4,7 +4,7 @@
 	branch = master
 [submodule "twine"]
 	path = twine
-	url = ../twine.git
+	url = https://github.com/elk-audio/twine.git
 [submodule "third-party/link"]
 	path = third-party/link
 	url = https://github.com/Ableton/link.git
@@ -25,19 +25,19 @@
 	url = https://github.com/getsentry/sentry-native.git
 [submodule "rpc_interface/protos"]
 	path = rpc_interface/protos
-	url = ../sushi-grpc-api
+	url = https://github.com/elk-audio/sushi-grpc-api.git
 [submodule "third-party/brickworks"]
 	path = third-party/brickworks
 	url = https://github.com/Orastron/brickworks/
 [submodule "third-party/freeverb"]
 	path = third-party/freeverb
-	url = ../freeverb.git
+	url = https://github.com/elk-audio/freeverb.git
 [submodule "elklog"]
 	path = elklog
-	url = ../elklog.git
+	url = https://github.com/elk-audio/elklog.git
 [submodule "third-party/portaudio"]
 	path = third-party/portaudio
 	url = https://github.com/PortAudio/portaudio.git
 [submodule "third-party/elk-plugin-extensions"]
 	path = third-party/elk-plugin-extensions
-	url = ../elk-plugin-extensions.git
+	url = https://github.com/elk-audio/elk-plugin-extensions.git
